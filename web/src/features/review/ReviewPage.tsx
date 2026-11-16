@@ -1,10 +1,9 @@
 import { ArrowLeft, Copy, Download, FileQuestion } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { ApiError, errorMessage } from "../../api/client";
 import { downloadOriginal, useDocument, useTypeName } from "../../api/library";
-import { useForm } from "../../api/review";
-import type { DocumentDetail, FormDetail, FormSummary } from "../../api/types";
+import type { DocumentDetail, FormSummary } from "../../api/types";
+import { useScreenState } from "../../app/agentic";
 import { useAssistant } from "../../app/assistant";
 import { Alert } from "../../components/Alert";
 import { Badge } from "../../components/Badge";
@@ -16,8 +15,8 @@ import { plural } from "../../lib/format";
 import { ReviewState } from "../documents/ReviewState";
 import { Mark } from "../assistant/Mark";
 import { FormReview } from "./FormReview";
-import type { Box } from "./geometry";
-import { PageViewer, type Overlay } from "./PageViewer";
+import { useWorkspace } from "./hooks";
+import { PageViewer } from "./PageViewer";
 import styles from "./ReviewPage.module.css";
 
 /** `/documents/:id?form=<form id>&page=<n>`: the page viewer beside the selected form's checks. */
@@ -49,59 +48,12 @@ export function ReviewPage() {
 }
 
 function Workspace({ document }: { document: DocumentDetail }) {
-  const [params, setParams] = useSearchParams();
   const assistant = useAssistant();
   const notify = useToast();
   const typeName = useTypeName();
   const forms = document.forms;
-  const pageParam = Number(params.get("page")) || null;
-  // A link to a page (an assistant citation) opens the form on that page.
-  const formId =
-    params.get("form") ??
-    (forms.find((f) => f.status === "ok" && pageParam !== null && f.pages.includes(pageParam)) ??
-      forms.find((f) => f.status === "ok") ??
-      forms[0])?.id ??
-    null;
-  const summary = forms.find((f) => f.id === formId) ?? null;
-  const form = useForm(summary?.status === "ok" ? summary.id : null);
-  const [selected, setSelected] = useState<string | null>(null);
-  const page = pageParam ?? summary?.pages[0] ?? 1;
-
-  const { setCurrentDocument } = assistant;
-  useEffect(() => {
-    setCurrentDocument({ id: document.id, title: document.title });
-    return () => setCurrentDocument(null);
-  }, [document.id, document.title, setCurrentDocument]);
-
-  const setPage = useCallback(
-    (n: number) =>
-      setParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("page", String(n));
-          return next;
-        },
-        { replace: true },
-      ),
-    [setParams],
-  );
-
-  const selectForm = (f: FormSummary) => {
-    setSelected(null);
-    setParams({ form: f.id, page: String(f.pages[0] ?? 1) }, { replace: true });
-  };
-
-  const checks = form.data?.checks;
-  const select = useCallback(
-    (field: string | null) => {
-      setSelected(field);
-      const source = checks?.find((c) => c.field === field)?.source;
-      if (source && source.page !== page) setPage(source.page);
-    },
-    [checks, page, setPage],
-  );
-
-  const overlays = useMemo(() => toOverlays(form.data, page), [form.data, page]);
+  const { formId, summary, form, page, setPage, selectForm, selected, select, overlays } = useWorkspace(document);
+  useScreenState({ entity: { kind: "document", id: document.id, title: document.title }, detail: { form: formId, page, field: selected } });
 
   return (
     <div className={styles.workspace}>
@@ -195,14 +147,5 @@ function NotReviewed({ form, forms, onOpen }: { form: FormSummary; forms: FormSu
     <EmptyState icon={<FileQuestion />} title="Not a supported form">
       Pages {form.pages.join(", ")} could not be identified as one of the supported tax forms. Their text is stored for search.
     </EmptyState>
-  );
-}
-
-function toOverlays(form: FormDetail | undefined, page: number): Overlay[] {
-  if (!form) return [];
-  return form.checks.flatMap((c) =>
-    c.source && c.source.page === page
-      ? [{ field: c.field, box: c.source.box as Box, label: c.label, tone: c.review ? "done" : c.flags.length ? "flag" : "plain" } as Overlay]
-      : [],
   );
 }

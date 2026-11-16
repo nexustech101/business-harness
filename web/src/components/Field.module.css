@@ -59,3 +59,11 @@
   background-position: right 8px center;
   cursor: pointer;
 }
+
+.textarea {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  line-height: 1.45;
+  resize: vertical;
+}

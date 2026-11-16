@@ -3,7 +3,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--s-4);
-  margin-bottom: var(--s-5);
+  margin-bottom: var(--s-6);
 }
 
 .text {
@@ -16,9 +16,10 @@
 }
 
 .description {
-  margin-top: 2px;
+  max-width: 72ch;
+  margin-top: 6px;
   color: var(--text-3);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-md);
 }
 
 .actions {

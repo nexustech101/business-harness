@@ -1,75 +1,66 @@
-import { LogOut, Monitor, Moon, Search, Sun } from "lucide-react";
-import { useState, type FormEvent, type ReactNode } from "react";
-import { matchPath, NavLink, Outlet, useLocation, useNavigate } from "react-router";
+import { Handshake, LogOut, Search } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { matchPath, Outlet, useLocation, useNavigate } from "react-router";
+import { useWorkspaceSummary } from "../api/business";
 import { Button } from "../components/Button";
-import { Segmented } from "../components/Segmented";
 import { AssistantPanel } from "../features/assistant/AssistantPanel";
 import { Mark } from "../features/assistant/Mark";
 import { pages } from "../features";
+import { useAgentic } from "./agentic";
 import { useAssistant } from "./assistant";
 import { useAuth } from "./auth";
-import { useTheme, type ThemeChoice } from "./theme";
+import { HintsBar } from "./HintsBar";
+import { Sidebar } from "./Sidebar";
 import styles from "./Shell.module.css";
-
-const THEMES: { value: ThemeChoice; label: ReactNode; title: string }[] = [
-  { value: "light", label: <><Sun aria-hidden /><span className="sr-only">Light</span></>, title: "Light theme" },
-  { value: "dark", label: <><Moon aria-hidden /><span className="sr-only">Dark</span></>, title: "Dark theme" },
-  { value: "system", label: <><Monitor aria-hidden /><span className="sr-only">System</span></>, title: "Follow the system theme" },
-];
 
 export function Shell() {
   const { me, signOut } = useAuth();
-  const { choice, setChoice } = useTheme();
   const assistant = useAssistant();
+  const { askPartner } = useAgentic();
+  const workspace = useWorkspaceSummary();
   const { pathname } = useLocation();
   const page = pages.find((p) => matchPath(p.path, pathname));
   const initials = (me?.name ?? "?").slice(0, 2).toUpperCase();
 
   return (
     <div className={styles.app}>
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>
-          <span className={styles.logo} aria-hidden>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 3h8l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-              <path d="m9 13 2 2 4-4" />
-            </svg>
-          </span>
-          <span className={styles.brandName}>Tax Documents</span>
-        </div>
-        <nav className={styles.nav} aria-label="Main">
-          {pages
-            .filter((p) => p.nav)
-            .map(({ path, label, icon: Icon }) => (
-              <NavLink key={path} to={path} end={path === "/"} className={styles.navLink} title={label}>
-                {Icon && <Icon />}
-                <span className={styles.navLabel}>{label}</span>
-              </NavLink>
-            ))}
-        </nav>
-        <div className={styles.account}>
-          <span className={styles.avatar} aria-hidden>{initials}</span>
-          <div className={styles.accountText}>
-            <span className="truncate">{me?.name}</span>
-            <span className={styles.accountRole}>{me?.is_admin ? "Admin key" : "Client key"}</span>
-          </div>
-          <Button variant="ghost" size="sm" icon={<LogOut />} aria-label="Sign out" title="Sign out" onClick={() => signOut()} />
-        </div>
-      </aside>
+      <Sidebar />
       <div className={styles.main}>
         <header className={styles.topbar}>
-          <GlobalSearch />
+          <div className={styles.business}>
+            <span className={`${styles.businessName} truncate`} data-testid="business-name">
+              {workspace.data?.business_name || "Your business"}
+            </span>
+            <GlobalSearch />
+          </div>
           <div className={styles.topActions}>
-            <Segmented label="Theme" value={choice} onChange={setChoice} options={THEMES} />
-            {pathname !== "/assistant" && <Button
-              icon={<Mark size={16} />}
-              aria-pressed={assistant.panelOpen}
-              onClick={assistant.panelOpen ? assistant.closePanel : assistant.openPanel}
-            >
-              Assistant
-            </Button>}
+            {pathname !== "/partner" && (
+              <Button icon={<Handshake />} title="Ask the partner about this screen" onClick={askPartner}>
+                Ask the partner
+              </Button>
+            )}
+            {pathname !== "/assistant" && (
+              <Button
+                icon={<Mark size={16} />}
+                aria-pressed={assistant.panelOpen}
+                onClick={assistant.panelOpen ? assistant.closePanel : assistant.openPanel}
+              >
+                Ask documents
+              </Button>
+            )}
+            <div className={styles.account}>
+              <span className={styles.avatar} aria-hidden>
+                {initials}
+              </span>
+              <span className={styles.accountText}>
+                <span className="truncate" data-testid="key-name">{me?.name}</span>
+                <span className={styles.accountRole}>{me?.is_admin ? "Admin key" : "Client key"}</span>
+              </span>
+              <Button variant="ghost" size="sm" icon={<LogOut />} aria-label="Sign out" title="Sign out" onClick={() => signOut()} />
+            </div>
           </div>
         </header>
+        <HintsBar />
         <main className={page?.fullBleed ? styles.full : styles.content}>
           <Outlet />
         </main>

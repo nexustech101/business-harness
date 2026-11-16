@@ -1,9 +1,10 @@
-import { ChevronLeft, ChevronRight, FileText, Search, Trash2, Upload, X } from "lucide-react";
+import { BarChart3, ChevronLeft, ChevronRight, FileText, Search, Trash2, Upload, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { errorMessage } from "../../api/client";
 import { useDeleteDocument, useDocuments, useDocumentTypes, useStats, useTypeName } from "../../api/library";
 import type { DocumentFilters, LibraryDocument, ReviewStatus } from "../../api/types";
+import { useScreenState } from "../../app/agentic";
 import { Alert } from "../../components/Alert";
 import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
@@ -56,6 +57,7 @@ export function DocumentsPage() {
   const [toDelete, setToDelete] = useState<LibraryDocument | null>(null);
   const uploading = params.get("upload") === "1";
   const filtered = FILTERS.some((f) => filters[f] !== undefined);
+  useScreenState({ detail: { ...filters, offset, shown: list.data?.documents.length ?? null } });
 
   return (
     <div>
@@ -63,9 +65,14 @@ export function DocumentsPage() {
         title="Documents"
         description="Every uploaded file, its forms and their review status."
         actions={
-          <Button variant="primary" icon={<Upload />} onClick={() => set({ upload: 1, offset })}>
-            Upload
-          </Button>
+          <>
+            <Link to="/documents/overview" className={styles.overviewLink}>
+              <BarChart3 aria-hidden /> Overview
+            </Link>
+            <Button variant="primary" icon={<Upload />} onClick={() => set({ upload: 1, offset })}>
+              Upload
+            </Button>
+          </>
         }
       />
       <Card flush>

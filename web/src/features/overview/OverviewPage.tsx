@@ -24,7 +24,7 @@ export function OverviewPage() {
   );
   return (
     <div>
-      <PageHeader title="Overview" description="Documents in the library and where their review stands." actions={upload} />
+      <PageHeader title="Overview" eyebrow={<Link to="/documents">Documents</Link>} description="Documents in the library and where their review stands." actions={upload} />
       {stats.isError ? (
         <Alert title="The overview could not be loaded">{errorMessage(stats.error)}</Alert>
       ) : stats.data?.documents === 0 ? (

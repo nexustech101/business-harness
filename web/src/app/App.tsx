@@ -6,6 +6,7 @@ import { ToastProvider } from "../components/Toast";
 import { pages } from "../features";
 import { NotFound } from "./NotFound";
 import { SignIn } from "./SignIn";
+import { AgenticProvider } from "./agentic";
 import { AssistantProvider } from "./assistant";
 import { AuthProvider, useAuth } from "./auth";
 import { Shell } from "./Shell";
@@ -22,19 +23,22 @@ const queryClient = new QueryClient({
   },
 });
 
-function Routed() {
+/** Sign-in, or every page inside the shell (inside a router and `AuthProvider`; tests render it in a MemoryRouter). */
+export function Routed() {
   const { me } = useAuth();
   if (!me) return <SignIn />;
   return (
     <AssistantProvider>
-      <Routes>
-        <Route element={<Shell />}>
-          {pages.map(({ path, component: Page }) => (
-            <Route key={path} path={path} element={<Page />} />
-          ))}
-          <Route path="*" element={<NotFound />} />
-        </Route>
-      </Routes>
+      <AgenticProvider>
+        <Routes>
+          <Route element={<Shell />}>
+            {pages.map(({ path, component: Page }) => (
+              <Route key={path} path={path} element={<Page />} />
+            ))}
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </AgenticProvider>
     </AssistantProvider>
   );
 }

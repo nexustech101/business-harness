@@ -1,8 +1,6 @@
 import { CheckCircle2, RotateCcw, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ApiError, errorMessage } from "../../api/client";
-import { useFormStatus, useReviewField } from "../../api/review";
-import type { Check, DocumentDetail, FormDetail, ReviewRequest } from "../../api/types";
+import { useMemo, useState, type ReactNode } from "react";
+import type { Check, DocumentDetail, FormDetail } from "../../api/types";
 import { Alert } from "../../components/Alert";
 import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
@@ -10,10 +8,10 @@ import { EmptyState } from "../../components/EmptyState";
 import { Kbd } from "../../components/Kbd";
 import { Progress } from "../../components/Progress";
 import { Segmented } from "../../components/Segmented";
-import { useToast } from "../../components/Toast";
 import { FLAGS } from "../../lib/flags";
 import { formatDateTime, plural } from "../../lib/format";
 import { CheckRow } from "./CheckRow";
+import { useDecide, useReviewShortcuts, useRowSelection } from "./hooks";
 import styles from "./FormReview.module.css";
 
 export type Filter = "flagged" | "unchecked" | "all";
@@ -33,91 +31,16 @@ type Props = {
 
 /** The check list of one extracted form: progress, filter, decisions, approval and keyboard shortcuts. */
 export function FormReview({ form, document, selected, onSelect }: Props) {
-  const notify = useToast();
-  const review = useReviewField(form);
-  const status = useFormStatus(form);
   const [filter, setFilter] = useState<Filter>(() => (form.open_flags > 0 ? "flagged" : "all"));
-  const [editing, setEditing] = useState<string | null>(null);
-  const [rowError, setRowError] = useState<{ field: string; message: string } | null>(null);
-  const rows = useRef(new Map<string, HTMLLIElement>());
-
   const visible = useMemo(() => form.checks.filter(FILTERS[filter]), [form.checks, filter]);
   const undecided = form.checks.filter((c) => c.flags.length > 0 && c.review === null);
   const counts = { flagged: form.checks.filter(FILTERS.flagged).length, unchecked: form.checks.filter(FILTERS.unchecked).length, all: form.checks.length };
-
-  // Keep a visible row selected; scroll the selected row into view.
-  useEffect(() => {
-    if (!visible.length) return;
-    if (!selected || !visible.some((c) => c.field === selected)) onSelect(visible[0]!.field);
-  }, [visible, selected, onSelect]);
-  useEffect(() => {
-    if (selected) rows.current.get(selected)?.scrollIntoView({ block: "nearest" });
-  }, [selected]);
-
-  const move = (step: number) => {
-    const at = visible.findIndex((c) => c.field === selected);
-    const next = visible[Math.min(visible.length - 1, Math.max(0, at + step))];
-    if (next) onSelect(next.field);
-  };
-
-  const decide = (check: Check, body: ReviewRequest | null) => {
-    setRowError(null);
-    const at = visible.findIndex((c) => c.field === check.field);
-    review.mutate(
-      { field: check.field, review: body },
-      {
-        onSuccess: () => {
-          setEditing(null);
-          // Advance after a decision, so a reviewer can work down the list with the keyboard.
-          const next = body && visible[at + 1];
-          if (next) onSelect(next.field);
-        },
-        onError: (e) => setRowError({ field: check.field, message: errorMessage(e) }),
-      },
-    );
-  };
-
-  const approve = () =>
-    status.mutate("approve", {
-      onSuccess: () => notify(`${form.form_name ?? "Form"} approved`),
-      onError: (e) => {
-        const undecidedFields = e instanceof ApiError ? (e.details?.undecided as string[] | undefined) : undefined;
-        notify(errorMessage(e), "danger");
-        if (undecidedFields?.[0]) {
-          setFilter("flagged");
-          onSelect(undecidedFields[0]);
-        }
-      },
-    });
-
-  // Shortcuts, ignored while typing in a field.
-  const current = form.checks.find((c) => c.field === selected) ?? null;
-  const handler = useRef<(e: KeyboardEvent) => void>(() => {});
-  handler.current = (e) => {
-    const typing = e.target instanceof Element && e.target.closest("input, textarea, select, [contenteditable], dialog");
-    if (e.metaKey || e.ctrlKey || e.altKey || typing) return;
-    const actions: Record<string, () => void> = {
-      j: () => move(1),
-      ArrowDown: () => move(1),
-      k: () => move(-1),
-      ArrowUp: () => move(-1),
-      c: () => current && decide(current, { decision: "confirmed" }),
-      e: () => current && setEditing(current.field),
-      r: () => current && decide(current, { decision: "rejected" }),
-      u: () => current?.review && decide(current, null),
-      Escape: () => setEditing(null),
-    };
-    const action = actions[e.key];
-    if (action && !review.isPending) {
-      e.preventDefault();
-      action();
-    }
-  };
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => handler.current(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
+  const { move, rowRef } = useRowSelection(visible, selected, onSelect);
+  const { decide, approve, reopen, statusPending, deciding, savingField, editing, setEditing, rowError } = useDecide(form, visible, onSelect, (field) => {
+    setFilter("flagged");
+    onSelect(field);
+  });
+  useReviewShortcuts({ current: form.checks.find((c) => c.field === selected) ?? null, move, decide, setEditing, paused: deciding });
 
   const approved = form.review_status === "approved";
   let group: string | null | undefined;
@@ -134,7 +57,7 @@ export function FormReview({ form, document, selected, onSelect }: Props) {
             </span>
           </div>
           {approved ? (
-            <Button size="sm" icon={<RotateCcw />} onClick={() => status.mutate("reopen")} loading={status.isPending}>
+            <Button size="sm" icon={<RotateCcw />} onClick={reopen} loading={statusPending}>
               Reopen
             </Button>
           ) : (
@@ -142,7 +65,7 @@ export function FormReview({ form, document, selected, onSelect }: Props) {
               variant="primary"
               icon={<ShieldCheck />}
               onClick={approve}
-              loading={status.isPending}
+              loading={statusPending}
               disabled={undecided.length > 0}
               title={undecided.length ? `Decide ${plural(undecided.length, "flagged field")} first` : "Mark this form reviewed"}
             >
@@ -200,15 +123,12 @@ export function FormReview({ form, document, selected, onSelect }: Props) {
             return (
               <FragmentRow key={check.field} header={header === undefined ? undefined : header ?? "Form fields"}>
                 <CheckRow
-                  ref={(el) => {
-                    if (el) rows.current.set(check.field, el);
-                    else rows.current.delete(check.field);
-                  }}
+                  ref={rowRef(check.field)}
                   check={check}
                   document={document}
                   selected={check.field === selected}
                   editing={check.field === editing}
-                  busy={review.isPending && review.variables?.field === check.field}
+                  busy={savingField === check.field}
                   error={rowError?.field === check.field ? rowError.message : null}
                   onSelect={() => onSelect(check.field)}
                   onDecide={(body) => decide(check, body)}

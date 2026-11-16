@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, unwrap } from "./client";
 import { invalidateLibrary, keys } from "./library";
-import type { FormDetail, ReviewRequest } from "./types";
+import type { Check, FormDetail, ReviewRequest } from "./types";
 
 export function useForm(id: string | null) {
   return useQuery({
@@ -14,9 +14,13 @@ export function useForm(id: string | null) {
 
 export type ReviewChange = { field: string; review: ReviewRequest | null };
 
-/** Sets (`review`) or clears (`review: null`) the decision on one field. */
+/**
+ * Sets (`review`) or clears (`review: null`) the decision on one field. The cached form shows the decision at once
+ * (reviewer blank until the API answers) and goes back to what it was when the request fails.
+ */
 export function useReviewField(form: FormDetail) {
   const queryClient = useQueryClient();
+  const key = keys.form(form.id);
   return useMutation({
     mutationFn: ({ field, review }: ReviewChange) => {
       const params = { path: { form_id: form.id, field } };
@@ -26,11 +30,19 @@ export function useReviewField(form: FormDetail) {
           : api.DELETE("/v1/library/forms/{form_id}/reviews/{field}", { params }),
       );
     },
+    onMutate: async ({ field, review }: ReviewChange) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<FormDetail>(key);
+      const pending = review && { value: null, note: null, ...review, reviewer: "", reviewer_id: 0, updated_at: new Date().toISOString() };
+      queryClient.setQueryData<FormDetail>(key, (old) => old && withCheck(old, field, (c) => ({ ...c, review: pending })));
+      return { previous };
+    },
+    onError: (_error, _change, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+    },
     onSuccess: (check) => {
-      // Show the new decision at once; progress, status and counts come from the refetch.
-      queryClient.setQueryData<FormDetail>(keys.form(form.id), (old) =>
-        old && { ...old, checks: old.checks.map((c) => (c.field === check.field ? check : c)) },
-      );
+      // The API's check (normalised value, reviewer); progress, status and counts come from the refetch.
+      queryClient.setQueryData<FormDetail>(key, (old) => old && withCheck(old, check.field, () => check));
       return refresh(queryClient, form);
     },
   });
@@ -52,6 +64,10 @@ export function useFormStatus(form: FormDetail) {
       return refresh(queryClient, form, false);
     },
   });
+}
+
+function withCheck(form: FormDetail, field: string, change: (check: Check) => Check): FormDetail {
+  return { ...form, checks: form.checks.map((c) => (c.field === field ? change(c) : c)) };
 }
 
 function refresh(queryClient: ReturnType<typeof useQueryClient>, form: FormDetail, refetchForm = true) {

@@ -32,10 +32,10 @@ p {
 }
 
 h1 {
-  font-size: var(--fs-xl);
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  line-height: 1.25;
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
 }
 
 h2 {

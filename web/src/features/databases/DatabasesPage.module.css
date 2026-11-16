@@ -1,0 +1,271 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+.page > header {
+  margin-bottom: 0;
+}
+
+.picker {
+  width: 200px;
+}
+
+.pad {
+  padding: var(--s-5);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: var(--s-4);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* --- Tables list ------------------------------------------------------------------------------ */
+
+.tables {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: var(--s-2);
+  list-style: none;
+}
+
+.tables button {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r);
+  background: none;
+  color: var(--text-2);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tables button:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.tables button[aria-current="true"] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.tables svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+}
+
+.tables .truncate {
+  flex: 1;
+}
+
+.tables .num {
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}
+
+.noTables {
+  padding: var(--s-5);
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+
+/* --- Rows ----------------------------------------------------------------------------------------- */
+
+.main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  min-width: 0;
+}
+
+.main > section {
+  width: 100%;
+}
+
+.tableTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--mono);
+}
+
+.grid td {
+  height: 42px;
+  max-width: 320px;
+}
+
+.grid th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--text);
+}
+
+.type {
+  margin-left: 6px;
+  color: var(--text-3);
+  font-family: var(--font);
+  font-size: var(--fs-xs);
+  font-weight: 400;
+}
+
+.cell {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.null {
+  color: var(--text-3);
+  font-size: var(--fs-xs);
+  font-style: italic;
+}
+
+.noRows {
+  height: 96px !important;
+  color: var(--text-3);
+  text-align: center;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.editing td {
+  background: var(--accent-soft);
+}
+
+.input {
+  width: 100%;
+  min-width: 90px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+}
+
+.input:focus-visible {
+  border-color: var(--accent);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+
+.pager span {
+  margin-right: auto;
+}
+
+.emptyActions {
+  display: flex;
+  gap: var(--s-2);
+}
+
+/* --- SQL console ------------------------------------------------------------------------------- */
+
+.console {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.sql {
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+}
+
+.consoleBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.allow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--text-2);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+
+.allow input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.output {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+/* --- Dialogs ------------------------------------------------------------------------------------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.columns {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.columns legend {
+  padding: 0;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+}
+
+.columns p {
+  font-size: var(--fs-xs);
+}
+
+.column {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 160px auto;
+  gap: var(--s-2);
+  width: 100%;
+}

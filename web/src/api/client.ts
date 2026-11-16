@@ -7,6 +7,7 @@ import type { paths } from "./schema";
 
 let apiKey: string | null = null;
 let onUnauthorized = () => {};
+let onFailure: (method: string, path: string, status: number) => void = () => {};
 
 export function setApiKey(key: string | null) {
   apiKey = key;
@@ -16,6 +17,11 @@ export function setUnauthorizedHandler(handler: () => void) {
   onUnauthorized = handler;
 }
 
+/** Told about every failed response (app/agentic.tsx records them as `error` events). */
+export function setFailureListener(listener: typeof onFailure) {
+  onFailure = listener;
+}
+
 export const api = createClient<paths>();
 
 api.use({
@@ -23,8 +29,9 @@ api.use({
     if (apiKey) request.headers.set("X-API-Key", apiKey);
     return request;
   },
-  onResponse({ response }) {
+  onResponse({ request, response }) {
     if (response.status === 401 && apiKey) onUnauthorized();
+    if (!response.ok) onFailure(request.method, new URL(request.url).pathname, response.status);
     return response;
   },
 });

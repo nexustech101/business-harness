@@ -3,95 +3,12 @@
   height: 100%;
 }
 
-.sidebar {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  width: var(--sidebar);
-  border-right: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: var(--topbar);
-  padding: 0 var(--s-4);
-  border-bottom: 1px solid var(--border);
-}
-
-.logo {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: var(--accent);
-  color: #fff;
-}
-
-.logo svg {
-  width: 17px;
-  height: 17px;
-}
-
-.brandName {
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-}
-
-.nav {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-  padding: var(--s-3) var(--s-2);
-}
-
-.navLink {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 34px;
-  padding: 0 10px;
-  border-radius: var(--r);
-  color: var(--text-2);
-  font-weight: 500;
-}
-
-.navLink svg {
-  flex: none;
-  width: 17px;
-  height: 17px;
-  color: var(--text-3);
-}
-
-.navLink:hover {
-  background: var(--surface-hover);
-  color: var(--text);
-  text-decoration: none;
-}
-
-.navLink[aria-current="page"],
-.navLink:global(.active) {
-  background: var(--accent-soft);
-  color: var(--accent-text);
-}
-
-.navLink[aria-current="page"] svg,
-.navLink:global(.active) svg {
-  color: var(--accent-text);
-}
-
 .account {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
-  border-top: 1px solid var(--border);
+  gap: var(--s-2);
+  padding-left: var(--s-3);
+  border-left: 1px solid var(--border);
 }
 
 .avatar {
@@ -101,18 +18,18 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  color: var(--text-2);
+  background: linear-gradient(135deg, var(--mark-from), var(--mark-to));
+  border: 0;
+  color: #fff;
   font-size: var(--fs-xs);
   font-weight: 600;
 }
 
 .accountText {
   display: flex;
-  flex: 1;
   flex-direction: column;
   min-width: 0;
+  max-width: 160px;
   font-size: var(--fs-sm);
   font-weight: 500;
   line-height: 1.3;
@@ -138,9 +55,26 @@
   justify-content: space-between;
   gap: var(--s-4);
   height: var(--topbar);
-  padding: 0 var(--s-6);
+  padding: 0 var(--s-8);
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  backdrop-filter: saturate(160%) blur(12px);
+}
+
+.business {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.businessName {
+  flex: none;
+  max-width: 260px;
+  font-size: var(--fs-lg);
+  font-weight: 650;
+  letter-spacing: -0.015em;
 }
 
 .search {
@@ -151,7 +85,7 @@
   height: var(--control-h);
   padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: var(--r);
+  border-radius: var(--r-full);
   background: var(--surface-2);
   color: var(--text-3);
 }
@@ -194,11 +128,11 @@
 .content {
   flex: 1;
   overflow: auto;
-  padding: var(--s-6) var(--s-8) var(--s-10);
+  padding: var(--s-8) var(--s-8) var(--s-10);
 }
 
 .content > * {
-  max-width: 1360px;
+  max-width: 1280px;
   margin-inline: auto;
 }
 
@@ -211,29 +145,9 @@
 }
 
 @media (max-width: 1100px) {
-  .sidebar {
-    width: 60px;
-  }
-
-  .brand {
-    justify-content: center;
-    padding: 0;
-  }
-
-  .brandName,
-  .navLabel,
-  .accountText {
+  .accountText,
+  .search {
     display: none;
-  }
-
-  .navLink {
-    justify-content: center;
-    padding: 0;
-  }
-
-  .account {
-    flex-direction: column;
-    padding: var(--s-3) 0;
   }
 
   .content {

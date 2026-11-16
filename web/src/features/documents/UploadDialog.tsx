@@ -1,59 +1,29 @@
 import { CheckCircle2, CircleAlert, FileUp, X } from "lucide-react";
 import { useRef, useState, type DragEvent } from "react";
 import { Link } from "react-router";
-import { errorMessage } from "../../api/client";
-import { useStats, useUploadDocument } from "../../api/library";
-import type { DocumentDetail } from "../../api/types";
+import { useStats } from "../../api/library";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
 import { Field, Input } from "../../components/Field";
 import { Spinner } from "../../components/Spinner";
 import { formatBytes, plural } from "../../lib/format";
+import { useUploadQueue, type UploadItem } from "./hooks";
 import styles from "./UploadDialog.module.css";
 
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.txt,.md,.csv,.xlsx";
 
-type Item = { file: File; state: "queued" | "uploading" | "done" | "failed"; result?: DocumentDetail; error?: string };
-
 /** Files are sent one at a time (the API processes uploads one per extraction slot); each shows its own result. */
 export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const upload = useUploadDocument();
   const clients = useStats().data?.clients.flatMap((c) => (c.client ? [c.client] : [])) ?? [];
-  const [items, setItems] = useState<Item[]>([]);
+  const { items, add, remove, start, clear, running, remaining } = useUploadQueue();
   const [client, setClient] = useState("");
   const [year, setYear] = useState("");
-  const [running, setRunning] = useState(false);
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
-  const add = (files: FileList | null) => {
-    const added = Array.from(files ?? [], (file): Item => ({ file, state: "queued" })); // copy now: the input is reset next
-    setItems((all) => [...all, ...added]);
-  };
-  const update = (i: number, change: Partial<Item>) => setItems((all) => all.map((item, j) => (j === i ? { ...item, ...change } : item)));
-
-  const start = async () => {
-    setRunning(true);
-    for (const [i, item] of items.entries()) {
-      if (item.state === "done") continue;
-      update(i, { state: "uploading", error: undefined });
-      try {
-        const result = await upload.mutateAsync({
-          file: item.file,
-          client: client.trim() || undefined,
-          tax_year: /^\d{4}$/.test(year) ? Number(year) : undefined,
-        });
-        update(i, { state: "done", result });
-      } catch (error) {
-        update(i, { state: "failed", error: errorMessage(error) });
-      }
-    }
-    setRunning(false);
-  };
-
   const close = () => {
     if (running) return;
-    setItems([]);
+    clear();
     onClose();
   };
 
@@ -63,7 +33,6 @@ export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => 
     add(e.dataTransfer.files);
   };
 
-  const remaining = items.filter((i) => i.state !== "done").length;
   return (
     <Dialog
       open={open}
@@ -75,7 +44,7 @@ export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => 
           <Button onClick={close} disabled={running}>
             {items.length > 0 && remaining === 0 ? "Done" : "Cancel"}
           </Button>
-          <Button variant="primary" onClick={start} loading={running} disabled={remaining === 0}>
+          <Button variant="primary" onClick={() => start(client, year)} loading={running} disabled={remaining === 0}>
             {remaining > 0 ? `Upload ${plural(remaining, "file")}` : "Upload"}
           </Button>
         </>
@@ -135,7 +104,7 @@ export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => 
                   </span>
                 </div>
                 {item.state === "queued" && !running && (
-                  <Button variant="ghost" size="sm" icon={<X />} aria-label={`Remove ${item.file.name}`} onClick={() => setItems((all) => all.filter((_, j) => j !== i))} />
+                  <Button variant="ghost" size="sm" icon={<X />} aria-label={`Remove ${item.file.name}`} onClick={() => remove(i)} />
                 )}
                 {item.result && (
                   <Link to={`/documents/${item.result.id}`} onClick={close} className={styles.open}>
@@ -151,14 +120,14 @@ export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => 
   );
 }
 
-function ItemIcon({ state }: { state: Item["state"] }) {
+function ItemIcon({ state }: { state: UploadItem["state"] }) {
   if (state === "uploading") return <Spinner size={16} />;
   if (state === "done") return <CheckCircle2 className={styles.ok} aria-label="Done" />;
   if (state === "failed") return <CircleAlert className={styles.failed} aria-label="Failed" />;
   return <FileUp className={styles.queued} aria-hidden />;
 }
 
-function ItemDetail({ item }: { item: Item }) {
+function ItemDetail({ item }: { item: UploadItem }) {
   if (item.state === "uploading") return <>Extracting forms…</>;
   if (item.state === "failed") return <span className={styles.failed}>{item.error}</span>;
   if (item.result) {

@@ -1,6 +1,7 @@
 /**
  * The dashboard against the real API on fake models (see e2e/global-setup.ts). One serial story: sign in,
- * upload, overview, review, theme, assistant (panel, then page and New chat), delete. With the fake models every
+ * upload, document overview, review, theme (the sidebar's sun/moon toggle), document assistant (panel, then
+ * "Ask documents" page and New chat), delete. With the fake models every
  * extracted form has two flagged fields (an amount raised by 1000 -> not_printed, a text value with " | X" ->
  * multiple_values).
  */
@@ -18,7 +19,8 @@ test("the dashboard workflow", async ({ page }) => {
     await expect(page.getByText("This key is not valid, expired or revoked.")).toBeVisible();
     await page.getByLabel("API key").fill(process.env.E2E_CLIENT_KEY!);
     await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await page.getByRole("link", { name: "Documents", exact: true }).first().click();
     await expect(page.getByText("No documents yet")).toBeVisible();
   });
 
@@ -36,7 +38,7 @@ test("the dashboard workflow", async ({ page }) => {
     await expect(page.getByRole("row", { name: /stack/ })).toContainText("Gonzalez");
   });
 
-  await test.step("overview counts the uploads", async () => {
+  await test.step("the document overview counts the uploads", async () => {
     await page.getByRole("link", { name: "Overview" }).click();
     await expect(page.getByRole("group", { name: "Documents" })).toContainText("2");
     await expect(page.getByRole("group", { name: "Forms extracted" })).toContainText("4");
@@ -45,7 +47,7 @@ test("the dashboard workflow", async ({ page }) => {
   });
 
   await test.step("reviews a W-2: confirm, correct, reject, approve", async () => {
-    await page.getByRole("link", { name: "Documents" }).click();
+    await page.getByRole("link", { name: "Documents", exact: true }).first().click();
     await page.getByRole("link", { name: "w2", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Form W-2 Wage and Tax Statement" })).toBeVisible();
 
@@ -81,18 +83,19 @@ test("the dashboard workflow", async ({ page }) => {
     await expect(page.getByRole("button", { name: "Reopen" })).toBeVisible();
   });
 
-  await test.step("switches to dark mode and keeps it", async () => {
-    await page.getByRole("radio", { name: "Dark" }).click();
+  await test.step("switches to dark mode with the sidebar toggle and keeps it", async () => {
+    const theme = page.getByRole("radiogroup", { name: "Theme" });
+    await theme.getByRole("radio", { name: "Dark" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await page.getByRole("radio", { name: "Light" }).click();
+    await theme.getByRole("radio", { name: "Light" }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
 
-  await test.step("the assistant answers with a source that opens the document", async () => {
-    await page.getByRole("link", { name: "Overview" }).click();
-    await page.getByRole("button", { name: "Assistant" }).click();
+  await test.step("the document assistant answers with a source that opens the document", async () => {
+    await page.getByRole("link", { name: "Documents", exact: true }).first().click();
+    await page.getByRole("button", { name: "Ask documents" }).click();
     const panel = page.getByRole("complementary", { name: "Assistant" });
     await panel.getByLabel("Question").fill("What were the wages tips other compensation?");
     await panel.getByLabel("Question").press("Enter");
@@ -100,13 +103,13 @@ test("the dashboard workflow", async ({ page }) => {
     await expect(panel.getByTestId("citation").first()).toBeVisible();
     await panel.getByTestId("source").first().click();
     await expect(page).toHaveURL(/\/documents\/[\w-]+\?page=\d+/);
-    await expect(page.getByRole("link", { name: "Documents" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Documents", exact: true }).first()).toBeVisible();
     await expect(page.getByRole("tablist", { name: "Forms in this document" })).toBeVisible();
     await panel.getByRole("button", { name: "Close assistant" }).click();
   });
 
-  await test.step("the assistant page continues the conversation; New chat clears it", async () => {
-    await page.getByRole("link", { name: "Assistant" }).click();
+  await test.step("the Ask documents page continues the conversation; New chat clears it", async () => {
+    await page.getByRole("link", { name: "Ask documents" }).click();
     const log = page.getByRole("log", { name: "Conversation" });
     await expect(log.getByTestId("citation").first()).toBeVisible();
     const question = page.getByLabel("Question");
@@ -121,7 +124,7 @@ test("the dashboard workflow", async ({ page }) => {
   });
 
   await test.step("deletes a document", async () => {
-    await page.getByRole("link", { name: "Documents" }).first().click();
+    await page.getByRole("link", { name: "Documents", exact: true }).first().click();
     await page.getByRole("button", { name: "Delete stack" }).click();
     await page.getByRole("dialog", { name: "Delete document?" }).getByRole("button", { name: "Delete" }).click();
     await expect(page.getByText("Deleted stack")).toBeVisible();

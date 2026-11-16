@@ -62,21 +62,23 @@ export function useTypeName(): (id: string) => string {
   }, [data]);
 }
 
-export type UploadFields = { client?: string; tax_year?: number };
+/** `extract: false` stores the file for search only (no tax-form extraction); the API's default is `true`. */
+export type UploadFields = { client?: string; tax_year?: number; extract?: boolean };
 
 export function useUploadDocument() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ file, client, tax_year }: UploadFields & { file: File }) =>
+    mutationFn: ({ file, client, tax_year, extract = true }: UploadFields & { file: File }) =>
       unwrap(
         api.POST("/v1/library/documents", {
           // `file` is binary in the schema (typed as string); the serializer sends the File itself.
-          body: { file: file as unknown as string, client, tax_year, extract: true },
+          body: { file: file as unknown as string, client, tax_year, extract },
           bodySerializer(body) {
             const form = new FormData();
             form.set("file", file, file.name);
             if (body.client) form.set("client", body.client);
             if (body.tax_year) form.set("tax_year", String(body.tax_year));
+            if (!extract) form.set("extract", "false");
             return form;
           },
         }),
@@ -101,6 +103,7 @@ export function invalidateLibrary(queryClient: ReturnType<typeof useQueryClient>
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: keys.documents }),
     queryClient.invalidateQueries({ queryKey: keys.stats }),
+    queryClient.invalidateQueries({ queryKey: ["knowledge"] }), // the index follows the library (api/knowledge.ts)
   ]);
 }
 

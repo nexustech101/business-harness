@@ -5,6 +5,7 @@ import { Alert } from "../components/Alert";
 import { Button } from "../components/Button";
 import { Field, Input } from "../components/Field";
 import { useAuth } from "./auth";
+import { PRODUCT } from "./product";
 import styles from "./SignIn.module.css";
 
 export function SignIn() {
@@ -33,7 +34,7 @@ export function SignIn() {
           <KeyRound />
         </span>
         <div className={styles.heading}>
-          <h1>Sign in to Tax Documents</h1>
+          <h1>Sign in to {PRODUCT}</h1>
           <p>Use the API key you were given. An administrator creates keys in Settings or with <code>main.py create-key</code>.</p>
         </div>
         {(error || notice) && <Alert tone={error ? "danger" : "info"}>{error ?? notice}</Alert>}

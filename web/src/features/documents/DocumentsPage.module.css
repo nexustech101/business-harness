@@ -110,3 +110,16 @@
 .strong {
   color: var(--text);
 }
+
+.overviewLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: var(--s-2);
+  font-weight: 500;
+}
+
+.overviewLink svg {
+  width: 15px;
+  height: 15px;
+}

@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Tax Document API",
-    "description": "Identify US tax forms and extract their fields into validated JSON.\n\nOutput is machine-extracted decision support, not tax or legal advice. A qualified person must review every value against the source document before it is used on a return. See DISCLAIMER.md.",
+    "title": "Business Partner API",
+    "description": "A business workspace: a partner that learns the business from the owner and its documents, a searchable knowledge index, role assistants, and connectors they act through. Includes extraction of US tax forms into validated JSON.\n\nOutput is machine-extracted decision support, not tax or legal advice. A qualified person must review every value against the source document before it is used on a return. See DISCLAIMER.md.",
     "version": "2.0.0"
   },
   "paths": {
@@ -331,7 +331,7 @@
             }
           },
           "422": {
-            "description": "Unreadable, unsupported or multi-form document; invalid request or corrected value",
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
             "content": {
               "application/json": {
                 "schema": {
@@ -529,7 +529,7 @@
             }
           },
           "422": {
-            "description": "Unreadable, unsupported or multi-form document; invalid request or corrected value",
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
             "content": {
               "application/json": {
                 "schema": {
@@ -668,7 +668,7 @@
             }
           },
           "409": {
-            "description": "Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form)",
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
             "content": {
               "application/json": {
                 "schema": {
@@ -698,7 +698,7 @@
             }
           },
           "422": {
-            "description": "Unreadable, unsupported or multi-form document; invalid request or corrected value",
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
             "content": {
               "application/json": {
                 "schema": {
@@ -864,6 +864,29 @@
               "title": "Q"
             },
             "description": "Text in the title or client name."
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "upload",
+                    "workspace"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "upload: uploaded files (default); workspace: the workspace's own index records (profile, discovery answers, notes).",
+              "default": "upload",
+              "title": "Origin"
+            },
+            "description": "upload: uploaded files (default); workspace: the workspace's own index records (profile, discovery answers, notes)."
           }
         ],
         "responses": {
@@ -1017,6 +1040,29 @@
               "title": "Q"
             },
             "description": "Text in the title or client name."
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "upload",
+                    "workspace"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "upload: uploaded files (default); workspace: the workspace's own index records (profile, discovery answers, notes).",
+              "default": "upload",
+              "title": "Origin"
+            },
+            "description": "upload: uploaded files (default); workspace: the workspace's own index records (profile, discovery answers, notes)."
           }
         ],
         "responses": {
@@ -1433,7 +1479,7 @@
             }
           },
           "409": {
-            "description": "Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form)",
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
             "content": {
               "application/json": {
                 "schema": {
@@ -1613,7 +1659,7 @@
             }
           },
           "409": {
-            "description": "Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form)",
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
             "content": {
               "application/json": {
                 "schema": {
@@ -1623,7 +1669,7 @@
             }
           },
           "422": {
-            "description": "Unreadable, unsupported or multi-form document; invalid request or corrected value",
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
             "content": {
               "application/json": {
                 "schema": {
@@ -1708,7 +1754,7 @@
             }
           },
           "409": {
-            "description": "Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form)",
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
             "content": {
               "application/json": {
                 "schema": {
@@ -1796,7 +1842,7 @@
             }
           },
           "409": {
-            "description": "Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form)",
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
             "content": {
               "application/json": {
                 "schema": {
@@ -1874,7 +1920,7 @@
             }
           },
           "409": {
-            "description": "Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form)",
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
             "content": {
               "application/json": {
                 "schema": {
@@ -1902,7 +1948,7 @@
           "Assistant"
         ],
         "summary": "Ask the assistant about stored documents",
-        "description": "Stateless: send the conversation so far, oldest first, ending with the\nuser's message. The assistant uses read-only tools (search, list and read\ndocuments, classify or re-extract a stored file) on the documents this key\nmay read, within `scope`, then answers citing search excerpts as [n].\n`sources` lists every excerpt it retrieved under those numbers;\n`tool_calls` lists the tools it ran.",
+        "description": "Stateless: send the conversation so far, oldest first, ending with the\nuser's message. The assistant uses read-only tools (search, list and read\ndocuments, classify or re-extract a stored file) on the documents this key\nmay read, within `scope`, then answers citing search excerpts as [n].\n`sources` lists every excerpt it retrieved under those numbers;\n`tool_calls` lists the tools it ran. The workspace's own records\n(business profile, discovery answers, notes) are part of what it searches.",
         "operationId": "chat_v1_assistant_chat_post",
         "requestBody": {
           "content": {
@@ -1946,7 +1992,2871 @@
             }
           },
           "409": {
-            "description": "Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form)",
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Server busy, or a model backend is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/workspace": {
+      "get": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Workspace",
+        "description": "Where the workspace stands: profile and interview progress, documents, assistants, connectors, approvals,\nand store listings for tools the business uses that are not connected yet.",
+        "operationId": "workspace_v1_workspace_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_WorkspaceSummary_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/workspace/hints": {
+      "post": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Hints",
+        "description": "Contextual suggestions for the screen in `state`, given the recent `events` and the workspace.",
+        "operationId": "hints_v1_workspace_hints_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HintsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_HintsResponse_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/business/profile": {
+      "get": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Get Profile",
+        "operationId": "get_profile_v1_business_profile_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BusinessProfile_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Put Profile",
+        "description": "Replace the profile (the owner's edits). `updated_at` is set by the server.",
+        "operationId": "put_profile_v1_business_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessProfile"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_BusinessProfile_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/business/interview": {
+      "get": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Get Interview",
+        "description": "Progress per area of the question bank and the next questions to ask.",
+        "operationId": "get_interview_v1_business_interview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_InterviewState_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/business/interview/answers": {
+      "post": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Answer",
+        "description": "Record (or replace) the answer to one question.",
+        "operationId": "answer_v1_business_interview_answers_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_InterviewState_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/partner/chat": {
+      "post": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Partner Chat",
+        "description": "Talk to the business partner. Stateless: send the conversation so far, ending with the owner's message, and\nthe screen it was sent from. The partner interviews the owner from the question bank, records answers and\nprofile facts, organizes uploaded documents, recommends connectors and drafts assistants (JSON specs the\nowner activates).",
+        "operationId": "partner_chat_v1_partner_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_PartnerResponse_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Server busy, or a model backend is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/business/documents": {
+      "get": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Documents",
+        "description": "Library documents placed in the profile (department, kind, summary).",
+        "operationId": "documents_v1_business_documents_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_OrganizedDocument__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/business/documents/{document_id}": {
+      "put": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Organize",
+        "description": "Place a library document in the profile, or move it.",
+        "operationId": "organize_v1_business_documents__document_id__put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OrganizedDocument_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/business/notes": {
+      "get": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Notes",
+        "description": "The shared notes board: facts, hand-offs and reports the assistants post per topic, newest first.",
+        "operationId": "notes_v1_business_notes_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One topic; all topics when omitted.",
+              "title": "Topic"
+            },
+            "description": "One topic; all topics when omitted."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_Note__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Business"
+        ],
+        "summary": "Post Note",
+        "description": "Post a note as the owner; assistants sharing the topic read it.",
+        "operationId": "post_note_v1_business_notes_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_Note_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/assistants/schema": {
+      "get": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Spec Schema",
+        "description": "JSON Schema of an assistant spec: what `POST /v1/assistants` takes.",
+        "operationId": "spec_schema_v1_assistants_schema_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_dict_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/assistants": {
+      "get": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "List Assistants",
+        "operationId": "list_assistants_v1_assistants_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_AssistantInfo__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Create Assistant",
+        "description": "Create an assistant from its JSON spec. It starts as a `draft`; activate it to run it.",
+        "operationId": "create_assistant_v1_assistants_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantSpec"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AssistantInfo_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/assistants/{assistant_id}": {
+      "get": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Get Assistant",
+        "operationId": "get_assistant_v1_assistants__assistant_id__get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assistant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AssistantInfo_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Update Assistant",
+        "description": "Replace the spec; the status stays.",
+        "operationId": "update_assistant_v1_assistants__assistant_id__put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assistant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantSpec"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AssistantInfo_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Delete Assistant",
+        "operationId": "delete_assistant_v1_assistants__assistant_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assistant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistant Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/assistants/{assistant_id}/status": {
+      "put": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Set Status",
+        "description": "Activate, pause, or return to draft.",
+        "operationId": "set_status_v1_assistants__assistant_id__status_put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assistant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AssistantInfo_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/assistants/{assistant_id}/context": {
+      "get": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Context",
+        "description": "Exactly what the assistant's model receives before a task: context layers and offered tools.",
+        "operationId": "context_v1_assistants__assistant_id__context_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assistant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_AssistantContext_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/assistants/{assistant_id}/run": {
+      "post": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Run",
+        "description": "Give an active assistant a task. Read-only tool calls run; write calls follow its policy: `auto` runs,\n`ask` queues an approval (the assistant is told it is pending), `deny` refuses.",
+        "operationId": "run_v1_assistants__assistant_id__run_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assistant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Assistant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RunResponse_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Server busy, or a model backend is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/approvals": {
+      "get": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Approvals",
+        "operationId": "approvals_v1_approvals_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "executing",
+                    "rejected",
+                    "executed",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this status; newest first.",
+              "title": "Status"
+            },
+            "description": "Only this status; newest first."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_Approval__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/approvals/{approval_id}/decision": {
+      "post": {
+        "tags": [
+          "Assistants"
+        ],
+        "summary": "Decide",
+        "description": "Approve (the call runs now; `always` also sets the tool to `auto` for that assistant) or reject.",
+        "operationId": "decide_v1_approvals__approval_id__decision_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "approval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Approval Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_Approval_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connectors/catalog": {
+      "get": {
+        "tags": [
+          "Connectors"
+        ],
+        "summary": "Catalog",
+        "description": "The connector store, featured first.",
+        "operationId": "catalog_v1_connectors_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_ConnectorListing__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/connectors": {
+      "get": {
+        "tags": [
+          "Connectors"
+        ],
+        "summary": "List Connectors",
+        "operationId": "list_connectors_v1_connectors_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_ConnectorInfo__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Connectors"
+        ],
+        "summary": "Add Connector",
+        "description": "Add a connector from the store (`listing_id`) or by hand, then check it (the result is in `status`).\nstdio connectors run a command on the server: admin keys only.",
+        "operationId": "add_connector_v1_connectors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConnectorCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ConnectorInfo_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin key required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    },
+    "/v1/connectors/{connector_id}": {
+      "delete": {
+        "tags": [
+          "Connectors"
+        ],
+        "summary": "Remove Connector",
+        "operationId": "remove_connector_v1_connectors__connector_id__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connectors/{connector_id}/check": {
+      "post": {
+        "tags": [
+          "Connectors"
+        ],
+        "summary": "Check",
+        "description": "Connect and list its tools; `status`, `error` and `tool_count` are updated.",
+        "operationId": "check_v1_connectors__connector_id__check_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_ConnectorInfo_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connectors/{connector_id}/tools": {
+      "get": {
+        "tags": [
+          "Connectors"
+        ],
+        "summary": "Tools",
+        "operationId": "tools_v1_connectors__connector_id__tools_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_ConnectorTool__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/connectors/{connector_id}/oauth": {
+      "post": {
+        "tags": [
+          "Connectors"
+        ],
+        "summary": "Start Oauth",
+        "description": "Start the provider's sign-in; open `authorize_url` in the browser.",
+        "operationId": "start_oauth_v1_connectors__connector_id__oauth_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_OAuthStart_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "A connector (MCP server) could not be reached or failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/databases/{connector_id}/tables": {
+      "get": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Tables",
+        "description": "Every table with its columns and row count.",
+        "operationId": "tables_v1_databases__connector_id__tables_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_list_TableInfo__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Create Table",
+        "description": "Create a table; an integer `id` key column is added.",
+        "operationId": "create_table_v1_databases__connector_id__tables_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TableCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TableInfo_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/databases/{connector_id}/tables/import": {
+      "post": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Import Table",
+        "description": "A new table from a CSV file: the header names the columns, their types follow from the values.",
+        "operationId": "import_table_v1_databases__connector_id__tables_import_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_table_v1_databases__connector_id__tables_import_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_TableInfo_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "File, file count or page count over the limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/databases/{connector_id}/tables/{table}": {
+      "delete": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Drop Table",
+        "description": "Delete a table with all its rows.",
+        "operationId": "drop_table_v1_databases__connector_id__tables__table__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/databases/{connector_id}/tables/{table}/rows": {
+      "get": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Rows",
+        "description": "A page of rows in key order; `rowids` are the keys the row routes take.",
+        "operationId": "rows_v1_databases__connector_id__tables__table__rows_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_RowPage_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Insert Row",
+        "description": "Insert one row; returns its rowid.",
+        "operationId": "insert_row_v1_databases__connector_id__tables__table__rows_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RowWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_int_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/databases/{connector_id}/tables/{table}/export": {
+      "get": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Export Table",
+        "description": "The whole table as CSV, header first.",
+        "operationId": "export_table_v1_databases__connector_id__tables__table__export_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The table as CSV",
+            "content": {
+              "text/csv": {}
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/databases/{connector_id}/tables/{table}/rows/{rowid}": {
+      "put": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Update Row",
+        "description": "Set columns of one row.",
+        "operationId": "update_row_v1_databases__connector_id__tables__table__rows__rowid__put",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "rowid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Rowid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RowWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Delete Row",
+        "operationId": "delete_row_v1_databases__connector_id__tables__table__rows__rowid__delete",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          },
+          {
+            "name": "table",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Table"
+            }
+          },
+          {
+            "name": "rowid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Rowid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/databases/{connector_id}/query": {
+      "post": {
+        "tags": [
+          "Databases"
+        ],
+        "summary": "Query",
+        "description": "Run one SQL statement: a SELECT, or with `write` a statement that changes the database.",
+        "operationId": "query_v1_databases__connector_id__query_post",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Connector Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_QueryResult_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/knowledge": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Knowledge Map",
+        "description": "Every source in the index with its sections, passage count and how many passages no search or assistant has\nsurfaced yet. The totals cover the whole index (within `origin`); `q` and `unused` narrow `items`. The\nworkspace's records are brought up to date first.",
+        "operationId": "knowledge_map_v1_knowledge_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Text in the source's title.",
+              "title": "Q"
+            },
+            "description": "Text in the source's title."
+          },
+          {
+            "name": "origin",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "upload",
+                    "workspace"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "upload: files; workspace: the workspace's records.",
+              "title": "Origin"
+            },
+            "description": "upload: files; workspace: the workspace's records."
+          },
+          {
+            "name": "unused",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Only sources with passages never retrieved, most first.",
+              "default": false,
+              "title": "Unused"
+            },
+            "description": "Only sources with passages never retrieved, most first."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_KnowledgeMap_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/knowledge/{document_id}/passages": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Passages",
+        "description": "A source's passages in document order, exactly as indexed, with how often each was retrieved.",
+        "operationId": "passages_v1_knowledge__document_id__passages_get",
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_PassageList_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/knowledge/search": {
+      "post": {
+        "tags": [
+          "Knowledge"
+        ],
+        "summary": "Search",
+        "description": "Search files and workspace records together (meaning and keywords, as `POST /v1/library/search`). One source\nfills at most half of `hits`; `other_sources` names the sources that matched without a passage among them.",
+        "operationId": "search_v1_knowledge_search_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Envelope_KnowledgeSearchResponse_"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
             "content": {
               "application/json": {
                 "schema": {
@@ -2046,6 +4956,27 @@
         },
         "type": "object",
         "title": "Address"
+      },
+      "AnswerRequest": {
+        "properties": {
+          "question_id": {
+            "type": "string",
+            "title": "Question Id"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Answer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question_id",
+          "answer"
+        ],
+        "title": "AnswerRequest"
       },
       "ApiKeyCreate": {
         "properties": {
@@ -2176,6 +5107,423 @@
           "keys"
         ],
         "title": "ApiKeyList"
+      },
+      "Approval": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "assistant_id": {
+            "type": "string",
+            "title": "Assistant Id"
+          },
+          "assistant_name": {
+            "type": "string",
+            "title": "Assistant Name"
+          },
+          "connector_id": {
+            "type": "string",
+            "title": "Connector Id"
+          },
+          "tool": {
+            "type": "string",
+            "title": "Tool"
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Arguments"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "description": "The assistant's own words on why, from its message before the call."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "executing",
+              "rejected",
+              "executed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result",
+            "description": "Tool output once executed, or the error."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "assistant_id",
+          "assistant_name",
+          "connector_id",
+          "tool",
+          "arguments",
+          "reason",
+          "status",
+          "result",
+          "created_at",
+          "decided_at",
+          "decided_by",
+          "note"
+        ],
+        "title": "Approval"
+      },
+      "ApprovalDecision": {
+        "properties": {
+          "approve": {
+            "type": "boolean",
+            "title": "Approve"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "always": {
+            "type": "boolean",
+            "title": "Always",
+            "description": "Approve and set this tool to `auto` for the assistant.",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "approve"
+        ],
+        "title": "ApprovalDecision"
+      },
+      "AreaProgress": {
+        "properties": {
+          "area": {
+            "type": "string",
+            "enum": [
+              "identity",
+              "offering",
+              "customers",
+              "revenue",
+              "operations",
+              "departments",
+              "roles",
+              "finance",
+              "sales_marketing",
+              "tools",
+              "data",
+              "information_flow",
+              "compliance",
+              "goals"
+            ],
+            "title": "Area"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "area",
+          "label",
+          "answered",
+          "total"
+        ],
+        "title": "AreaProgress"
+      },
+      "AssistantContext": {
+        "properties": {
+          "layers": {
+            "items": {
+              "$ref": "#/components/schemas/ContextLayer"
+            },
+            "type": "array",
+            "title": "Layers"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tools",
+            "description": "Tool names offered, `<connector id>/<tool>` for connector tools."
+          },
+          "chars": {
+            "type": "integer",
+            "title": "Chars"
+          }
+        },
+        "type": "object",
+        "required": [
+          "layers",
+          "tools",
+          "chars"
+        ],
+        "title": "AssistantContext",
+        "description": "What the assistant's model receives before the task: the layers, in order, as sent."
+      },
+      "AssistantInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Role",
+            "description": "One sentence: what it is responsible for."
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Instructions",
+            "description": "How it works: steps, rules, tone.",
+            "default": ""
+          },
+          "connectors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Connectors",
+            "description": "Ids of installed connectors it may use."
+          },
+          "knowledge": {
+            "$ref": "#/components/schemas/KnowledgeScope"
+          },
+          "shares": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shares",
+            "description": "Notes-board topics it reads and posts to (shared with other assistants)."
+          },
+          "policy": {
+            "$ref": "#/components/schemas/WritePolicy"
+          },
+          "max_tool_rounds": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Max Tool Rounds",
+            "default": 6
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "paused"
+            ],
+            "title": "Status"
+          },
+          "created_by": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "partner"
+            ],
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "role",
+          "id",
+          "status",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AssistantInfo"
+      },
+      "AssistantSpec": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "role": {
+            "type": "string",
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Role",
+            "description": "One sentence: what it is responsible for."
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Instructions",
+            "description": "How it works: steps, rules, tone.",
+            "default": ""
+          },
+          "connectors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Connectors",
+            "description": "Ids of installed connectors it may use."
+          },
+          "knowledge": {
+            "$ref": "#/components/schemas/KnowledgeScope"
+          },
+          "shares": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Shares",
+            "description": "Notes-board topics it reads and posts to (shared with other assistants)."
+          },
+          "policy": {
+            "$ref": "#/components/schemas/WritePolicy"
+          },
+          "max_tool_rounds": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Max Tool Rounds",
+            "default": 6
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "role"
+        ],
+        "title": "AssistantSpec",
+        "description": "An assistant is this JSON object. The partner creates them; the owner can write or edit one by hand.\n\n{\"name\": \"Accountant\", \"role\": \"Keeps the books and prepares the monthly report\",\n \"department\": \"Finance\", \"instructions\": \"...\", \"connectors\": [\"<connector id>\"],\n \"knowledge\": {\"departments\": [\"Finance\"]}, \"shares\": [\"finance\", \"month-end\"],\n \"policy\": {\"default\": \"ask\", \"tools\": {\"<connector id>/list_invoices\": \"auto\"}}}"
+      },
+      "AssistantStatusRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "paused"
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "AssistantStatusRequest"
       },
       "Body_add_document_v1_library_documents_post": {
         "properties": {
@@ -2315,6 +5663,29 @@
           "file"
         ],
         "title": "Body_extract_document_v1_documents_extract_post"
+      },
+      "Body_import_table_v1_databases__connector_id__tables_import_post": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "title": "Name",
+            "description": "The new table's name."
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "UTF-8 CSV with a header row."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "file"
+        ],
+        "title": "Body_import_table_v1_databases__connector_id__tables_import_post"
       },
       "BrokerTransaction": {
         "properties": {
@@ -2644,6 +6015,141 @@
           "by_type"
         ],
         "title": "BulkSummary"
+      },
+      "BusinessProfile": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Summary",
+            "description": "What the business does, in a few sentences.",
+            "default": ""
+          },
+          "industry": {
+            "type": "string",
+            "title": "Industry",
+            "default": ""
+          },
+          "business_model": {
+            "type": "string",
+            "title": "Business Model",
+            "description": "How it makes money.",
+            "default": ""
+          },
+          "offerings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Offerings",
+            "description": "Products and services."
+          },
+          "customers": {
+            "type": "string",
+            "title": "Customers",
+            "description": "Who buys, and how they find the business.",
+            "default": ""
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Locations"
+          },
+          "team_size": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Size"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage",
+            "description": "e.g. solo, growing, established.",
+            "default": ""
+          },
+          "goals": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "pain_points": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Pain Points"
+          },
+          "departments": {
+            "items": {
+              "$ref": "#/components/schemas/Department"
+            },
+            "type": "array",
+            "title": "Departments"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/Role"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolInUse"
+            },
+            "type": "array",
+            "title": "Tools"
+          },
+          "flows": {
+            "items": {
+              "$ref": "#/components/schemas/InformationFlow"
+            },
+            "type": "array",
+            "title": "Flows"
+          },
+          "financials": {
+            "$ref": "#/components/schemas/Financials"
+          },
+          "compliance": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Compliance",
+            "description": "Licenses, regulations, filing duties."
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "BusinessProfile",
+        "description": "What the partner knows about the business. Filled from the interview and documents; the owner can edit it."
       },
       "ChatMessage": {
         "properties": {
@@ -3002,6 +6508,450 @@
         "type": "object",
         "title": "CodedAmount"
       },
+      "Column": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Letters, digits and _."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "integer",
+              "real",
+              "date",
+              "boolean"
+            ],
+            "title": "Type",
+            "default": "text"
+          },
+          "required": {
+            "type": "boolean",
+            "title": "Required",
+            "description": "NOT NULL.",
+            "default": false
+          },
+          "primary_key": {
+            "type": "boolean",
+            "title": "Primary Key",
+            "description": "Set by the database; ignored on create.",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Column"
+      },
+      "ConnectorCreate": {
+        "properties": {
+          "listing_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "streamable_http",
+              "sse",
+              "stdio",
+              "builtin"
+            ],
+            "title": "Transport",
+            "description": "`builtin` only through a store listing.",
+            "default": "streamable_http"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Remote servers."
+          },
+          "command": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command",
+            "description": "stdio servers (admin keys only)."
+          },
+          "args": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Args"
+          },
+          "auth": {
+            "type": "string",
+            "enum": [
+              "none",
+              "bearer",
+              "oauth"
+            ],
+            "title": "Auth",
+            "default": "none"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token",
+            "description": "Bearer token or API key; stored encrypted, never returned."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ConnectorCreate",
+        "description": "Add a connector: from the store (`listing_id`) or by hand."
+      },
+      "ConnectorInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "listing_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "streamable_http",
+              "sse",
+              "stdio",
+              "builtin"
+            ],
+            "title": "Transport"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "command": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command"
+          },
+          "args": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Args"
+          },
+          "auth": {
+            "type": "string",
+            "enum": [
+              "none",
+              "bearer",
+              "oauth"
+            ],
+            "title": "Auth"
+          },
+          "has_secret": {
+            "type": "boolean",
+            "title": "Has Secret"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "untested",
+              "connected",
+              "needs_auth",
+              "error"
+            ],
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "tool_count": {
+            "type": "integer",
+            "title": "Tool Count"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "listing_id",
+          "name",
+          "transport",
+          "url",
+          "command",
+          "args",
+          "auth",
+          "has_secret",
+          "status",
+          "error",
+          "tool_count",
+          "created_at",
+          "checked_at"
+        ],
+        "title": "ConnectorInfo"
+      },
+      "ConnectorListing": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "e.g. stripe, google-drive."
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "publisher": {
+            "type": "string",
+            "title": "Publisher"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "e.g. Storage, Payments, CRM, Productivity, Data, Automation."
+          },
+          "also_in": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Also In",
+            "description": "Further categories it is listed under."
+          },
+          "tagline": {
+            "type": "string",
+            "title": "Tagline",
+            "description": "One line on what assistants do with it.",
+            "default": ""
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "description": "How to connect it: where its URL and credentials come from."
+          },
+          "builtin": {
+            "type": "boolean",
+            "title": "Builtin",
+            "description": "Runs inside this app: no server, URL or sign-in.",
+            "default": false
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Capabilities"
+          },
+          "availability": {
+            "type": "string",
+            "title": "Availability",
+            "description": "As the publisher states it, e.g. 'Official, read-only'."
+          },
+          "docs_url": {
+            "type": "string",
+            "title": "Docs Url",
+            "description": "The publisher's setup page; empty for built-in apps."
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "streamable_http",
+              "sse",
+              "stdio",
+              "builtin"
+            ],
+            "title": "Transport"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Server URL for remote servers; None when it depends on the account."
+          },
+          "auth": {
+            "type": "string",
+            "enum": [
+              "none",
+              "bearer",
+              "oauth"
+            ],
+            "title": "Auth"
+          },
+          "featured": {
+            "type": "boolean",
+            "title": "Featured",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "publisher",
+          "category",
+          "description",
+          "capabilities",
+          "availability",
+          "docs_url",
+          "transport",
+          "url",
+          "auth"
+        ],
+        "title": "ConnectorListing",
+        "description": "An entry of the connector store."
+      },
+      "ConnectorTool": {
+        "properties": {
+          "connector_id": {
+            "type": "string",
+            "title": "Connector Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "read_only": {
+            "type": "boolean",
+            "title": "Read Only",
+            "description": "The server marks it read-only (MCP `readOnlyHint`); otherwise a write."
+          },
+          "input_schema": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Input Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "connector_id",
+          "name",
+          "description",
+          "read_only",
+          "input_schema"
+        ],
+        "title": "ConnectorTool"
+      },
+      "ContextLayer": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "business",
+              "role",
+              "team",
+              "notes"
+            ],
+            "title": "Name"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "text"
+        ],
+        "title": "ContextLayer"
+      },
       "CoveredIndividual": {
         "properties": {
           "name": {
@@ -3090,6 +7040,48 @@
         },
         "type": "object",
         "title": "CoveredIndividual"
+      },
+      "Department": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "description": "e.g. Finance, Sales, Operations."
+          },
+          "purpose": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Purpose",
+            "default": ""
+          },
+          "head": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Head",
+            "description": "Title of the role that leads it."
+          },
+          "responsibilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Responsibilities"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Department"
       },
       "DescribedAmount": {
         "properties": {
@@ -3436,6 +7428,42 @@
         ],
         "title": "Envelope[ApiKeyList]"
       },
+      "Envelope_Approval_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Approval"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[Approval]"
+      },
+      "Envelope_AssistantContext_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AssistantContext"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[AssistantContext]"
+      },
+      "Envelope_AssistantInfo_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AssistantInfo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[AssistantInfo]"
+      },
       "Envelope_BulkExtractResponse_": {
         "properties": {
           "data": {
@@ -3447,6 +7475,18 @@
           "data"
         ],
         "title": "Envelope[BulkExtractResponse]"
+      },
+      "Envelope_BusinessProfile_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/BusinessProfile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[BusinessProfile]"
       },
       "Envelope_ChatResponse_": {
         "properties": {
@@ -3483,6 +7523,18 @@
           "data"
         ],
         "title": "Envelope[ClassifyResponse]"
+      },
+      "Envelope_ConnectorInfo_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ConnectorInfo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[ConnectorInfo]"
       },
       "Envelope_DocumentDetail_": {
         "properties": {
@@ -3544,6 +7596,54 @@
         ],
         "title": "Envelope[HealthResponse]"
       },
+      "Envelope_HintsResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/HintsResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[HintsResponse]"
+      },
+      "Envelope_InterviewState_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/InterviewState"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[InterviewState]"
+      },
+      "Envelope_KnowledgeMap_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/KnowledgeMap"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[KnowledgeMap]"
+      },
+      "Envelope_KnowledgeSearchResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/KnowledgeSearchResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[KnowledgeSearchResponse]"
+      },
       "Envelope_LibraryStats_": {
         "properties": {
           "data": {
@@ -3556,6 +7656,102 @@
         ],
         "title": "Envelope[LibraryStats]"
       },
+      "Envelope_Note_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[Note]"
+      },
+      "Envelope_OAuthStart_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OAuthStart"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[OAuthStart]"
+      },
+      "Envelope_OrganizedDocument_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OrganizedDocument"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[OrganizedDocument]"
+      },
+      "Envelope_PartnerResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PartnerResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[PartnerResponse]"
+      },
+      "Envelope_PassageList_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PassageList"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[PassageList]"
+      },
+      "Envelope_QueryResult_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/QueryResult"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[QueryResult]"
+      },
+      "Envelope_RowPage_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RowPage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[RowPage]"
+      },
+      "Envelope_RunResponse_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RunResponse"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[RunResponse]"
+      },
       "Envelope_SearchResponse_": {
         "properties": {
           "data": {
@@ -3567,6 +7763,137 @@
           "data"
         ],
         "title": "Envelope[SearchResponse]"
+      },
+      "Envelope_TableInfo_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TableInfo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[TableInfo]"
+      },
+      "Envelope_WorkspaceSummary_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkspaceSummary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[WorkspaceSummary]"
+      },
+      "Envelope_dict_": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[dict]"
+      },
+      "Envelope_int_": {
+        "properties": {
+          "data": {
+            "type": "integer",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[int]"
+      },
+      "Envelope_list_Approval__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Approval"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[list[Approval]]"
+      },
+      "Envelope_list_AssistantInfo__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/AssistantInfo"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[list[AssistantInfo]]"
+      },
+      "Envelope_list_ConnectorInfo__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorInfo"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[list[ConnectorInfo]]"
+      },
+      "Envelope_list_ConnectorListing__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorListing"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[list[ConnectorListing]]"
+      },
+      "Envelope_list_ConnectorTool__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorTool"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[list[ConnectorTool]]"
       },
       "Envelope_list_DocumentType__": {
         "properties": {
@@ -3583,6 +7910,54 @@
           "data"
         ],
         "title": "Envelope[list[DocumentType]]"
+      },
+      "Envelope_list_Note__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Note"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[list[Note]]"
+      },
+      "Envelope_list_OrganizedDocument__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/OrganizedDocument"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[list[OrganizedDocument]]"
+      },
+      "Envelope_list_TableInfo__": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/TableInfo"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "Envelope[list[TableInfo]]"
       },
       "ErrorBody": {
         "properties": {
@@ -3797,6 +8172,61 @@
           "xlsx"
         ],
         "title": "FileType"
+      },
+      "Financials": {
+        "properties": {
+          "revenue_streams": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Revenue Streams"
+          },
+          "cost_centers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cost Centers"
+          },
+          "pricing": {
+            "type": "string",
+            "title": "Pricing",
+            "default": ""
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency",
+            "default": "USD"
+          },
+          "fiscal_year_end": {
+            "type": "string",
+            "title": "Fiscal Year End",
+            "description": "e.g. December 31.",
+            "default": ""
+          },
+          "accounting_method": {
+            "type": "string",
+            "enum": [
+              "",
+              "cash",
+              "accrual"
+            ],
+            "title": "Accounting Method",
+            "default": ""
+          },
+          "reporting": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reporting",
+            "description": "Reports the business produces, e.g. monthly P&L."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "Financials"
       },
       "Flag": {
         "properties": {
@@ -7273,6 +11703,189 @@
         ],
         "title": "HealthResponse"
       },
+      "Hint": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable per suggestion, so the dashboard can remember dismissals."
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "info",
+              "suggestion",
+              "warning"
+            ],
+            "title": "Tone"
+          },
+          "action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HintAction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "body",
+          "tone"
+        ],
+        "title": "Hint"
+      },
+      "HintAction": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "href": {
+            "type": "string",
+            "title": "Href",
+            "description": "Dashboard path to open, e.g. /connectors?add=stripe."
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "href"
+        ],
+        "title": "HintAction"
+      },
+      "HintsRequest": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/UiState"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/UiEvent"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Events",
+            "description": "Recent events, oldest first."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "title": "HintsRequest"
+      },
+      "HintsResponse": {
+        "properties": {
+          "hints": {
+            "items": {
+              "$ref": "#/components/schemas/Hint"
+            },
+            "type": "array",
+            "title": "Hints",
+            "description": "Most relevant first, at most 3."
+          }
+        },
+        "type": "object",
+        "required": [
+          "hints"
+        ],
+        "title": "HintsResponse"
+      },
+      "InformationFlow": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Department or role that produces it."
+          },
+          "target": {
+            "type": "string",
+            "title": "Target",
+            "description": "Department or role that uses it."
+          },
+          "what": {
+            "type": "string",
+            "title": "What",
+            "description": "e.g. weekly sales report, new order, invoice."
+          },
+          "cadence": {
+            "type": "string",
+            "title": "Cadence",
+            "description": "e.g. per order, weekly, month end.",
+            "default": ""
+          },
+          "via": {
+            "type": "string",
+            "title": "Via",
+            "description": "Tool or channel, e.g. Slack, a shared sheet.",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "target",
+          "what"
+        ],
+        "title": "InformationFlow",
+        "description": "Information one part of the business passes to another (a report, a hand-off, a shared record)."
+      },
+      "InterviewState": {
+        "properties": {
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "complete": {
+            "type": "boolean",
+            "title": "Complete",
+            "description": "Every area has its required questions answered."
+          },
+          "areas": {
+            "items": {
+              "$ref": "#/components/schemas/AreaProgress"
+            },
+            "type": "array",
+            "title": "Areas"
+          },
+          "next": {
+            "items": {
+              "$ref": "#/components/schemas/Question"
+            },
+            "type": "array",
+            "title": "Next",
+            "description": "What to ask next, most useful first (at most 5)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "answered",
+          "total",
+          "complete",
+          "areas",
+          "next"
+        ],
+        "title": "InterviewState"
+      },
       "K1CapitalAccount": {
         "properties": {
           "beginning_capital_account": {
@@ -7350,6 +11963,228 @@
         },
         "type": "object",
         "title": "K1CapitalAccount"
+      },
+      "KnowledgeMap": {
+        "properties": {
+          "sources": {
+            "type": "integer",
+            "title": "Sources",
+            "description": "Sources in the index."
+          },
+          "passages": {
+            "type": "integer",
+            "title": "Passages",
+            "description": "Indexed passages over all sources."
+          },
+          "never_retrieved": {
+            "type": "integer",
+            "title": "Never Retrieved",
+            "description": "Passages no search or assistant has surfaced yet."
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "Sources matching the request's filters."
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeSource"
+            },
+            "type": "array",
+            "title": "Items",
+            "description": "A page of the matching sources."
+          }
+        },
+        "type": "object",
+        "required": [
+          "sources",
+          "passages",
+          "never_retrieved",
+          "count",
+          "items"
+        ],
+        "title": "KnowledgeMap",
+        "description": "Everything the index holds, so nothing depends on being found by a search."
+      },
+      "KnowledgeScope": {
+        "properties": {
+          "departments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Departments"
+          },
+          "document_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Document Kinds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "KnowledgeScope",
+        "description": "Which organized documents the assistant can search. Empty lists: no limit."
+      },
+      "KnowledgeSearchRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Query"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/SearchFilters"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "KnowledgeSearchRequest"
+      },
+      "KnowledgeSearchResponse": {
+        "properties": {
+          "hits": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            },
+            "type": "array",
+            "title": "Hits"
+          },
+          "other_sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "type": "array",
+            "title": "Other Sources",
+            "description": "Sources that also matched but have no passage among `hits`: open them to read more."
+          }
+        },
+        "type": "object",
+        "required": [
+          "hits",
+          "other_sources"
+        ],
+        "title": "KnowledgeSearchResponse"
+      },
+      "KnowledgeSource": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "type": {
+            "$ref": "#/components/schemas/FileType"
+          },
+          "location": {
+            "type": "string",
+            "title": "Location"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "passages": {
+            "type": "integer",
+            "title": "Passages",
+            "description": "Indexed passages (chunks)."
+          },
+          "never_retrieved": {
+            "type": "integer",
+            "title": "Never Retrieved",
+            "description": "Passages no search result or assistant read has surfaced yet."
+          },
+          "last_retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Retrieved At"
+          },
+          "sections": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Sections",
+            "description": "Its section titles, in document order (the first ones)."
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "workspace"
+            ],
+            "title": "Origin",
+            "description": "upload: a file; workspace: what the partner and owner recorded."
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department",
+            "description": "Where the partner filed it, when organized."
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind",
+            "description": "e.g. invoice, contract, SOP; set when organized."
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "title",
+          "type",
+          "location",
+          "created_at",
+          "passages",
+          "never_retrieved",
+          "last_retrieved_at",
+          "sections",
+          "origin"
+        ],
+        "title": "KnowledgeSource",
+        "description": "One source of the index: an uploaded document, or a workspace record (profile, discovery answers, notes)."
       },
       "LibraryDocument": {
         "properties": {
@@ -7616,6 +12451,160 @@
         "type": "object",
         "title": "MonthlyCoverage"
       },
+      "Note": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "topic": {
+            "type": "string",
+            "title": "Topic"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "author": {
+            "type": "string",
+            "title": "Author",
+            "description": "Assistant name, 'partner' or 'owner'."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "topic",
+          "text",
+          "author",
+          "created_at"
+        ],
+        "title": "Note",
+        "description": "A fact, hand-off or report one assistant (or the owner) shares on a topic."
+      },
+      "NoteCreate": {
+        "properties": {
+          "topic": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Topic"
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "topic",
+          "text"
+        ],
+        "title": "NoteCreate"
+      },
+      "OAuthStart": {
+        "properties": {
+          "authorize_url": {
+            "type": "string",
+            "title": "Authorize Url",
+            "description": "Open it; the provider redirects back to /v1/connectors/oauth/callback."
+          }
+        },
+        "type": "object",
+        "required": [
+          "authorize_url"
+        ],
+        "title": "OAuthStart"
+      },
+      "OrganizeRequest": {
+        "properties": {
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "kind": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Kind"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Summary",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "OrganizeRequest"
+      },
+      "OrganizedDocument": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "e.g. invoice, contract, SOP, price list, report."
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "organized_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Organized At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "title",
+          "department",
+          "kind",
+          "summary",
+          "organized_at"
+        ],
+        "title": "OrganizedDocument",
+        "description": "A library document placed in the business profile by the partner (or the owner)."
+      },
       "PageInfo": {
         "properties": {
           "n": {
@@ -7641,6 +12630,93 @@
           "height"
         ],
         "title": "PageInfo"
+      },
+      "PartnerRequest": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Messages"
+          },
+          "ui_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UiState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The screen the message was sent from."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "PartnerRequest"
+      },
+      "PartnerResponse": {
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/ChatMessage"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "type": "array",
+            "title": "Sources",
+            "description": "Every excerpt `search_documents` retrieved, numbered as cited."
+          },
+          "tool_calls": {
+            "items": {
+              "$ref": "#/components/schemas/ToolCallInfo"
+            },
+            "type": "array",
+            "title": "Tool Calls",
+            "description": "Tools the assistant ran, in order."
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "usage": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Usage",
+            "description": "Token counts as reported by the provider."
+          },
+          "profile_changed": {
+            "type": "boolean",
+            "title": "Profile Changed",
+            "description": "The partner changed the profile; refetch it."
+          },
+          "assistants_changed": {
+            "type": "boolean",
+            "title": "Assistants Changed",
+            "description": "The partner created or changed an assistant."
+          },
+          "interview": {
+            "$ref": "#/components/schemas/InterviewState"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "sources",
+          "tool_calls",
+          "model",
+          "profile_changed",
+          "assistants_changed",
+          "interview"
+        ],
+        "title": "PartnerResponse"
       },
       "Party": {
         "properties": {
@@ -7691,6 +12767,248 @@
         },
         "type": "object",
         "title": "Party"
+      },
+      "Passage": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Position in the document (0-based)."
+          },
+          "section_title": {
+            "type": "string",
+            "title": "Section Title"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "sheet_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sheet Name"
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "retrievals": {
+            "type": "integer",
+            "title": "Retrievals",
+            "description": "Times a search or an assistant surfaced it."
+          },
+          "last_retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Retrieved At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "index",
+          "section_title",
+          "page_number",
+          "sheet_name",
+          "document_type",
+          "content",
+          "retrievals",
+          "last_retrieved_at"
+        ],
+        "title": "Passage"
+      },
+      "PassageList": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count",
+            "description": "Passages in the document."
+          },
+          "passages": {
+            "items": {
+              "$ref": "#/components/schemas/Passage"
+            },
+            "type": "array",
+            "title": "Passages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "title",
+          "count",
+          "passages"
+        ],
+        "title": "PassageList"
+      },
+      "QueryRequest": {
+        "properties": {
+          "sql": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Sql",
+            "description": "One SQLite statement."
+          },
+          "write": {
+            "type": "boolean",
+            "title": "Write",
+            "description": "False: SELECT only. True: the statement may change data.",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sql"
+        ],
+        "title": "QueryRequest"
+      },
+      "QueryResult": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated",
+            "description": "More rows matched than are returned.",
+            "default": false
+          },
+          "changed": {
+            "type": "integer",
+            "title": "Changed",
+            "description": "Rows a write statement changed.",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "columns",
+          "rows"
+        ],
+        "title": "QueryResult"
+      },
+      "Question": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Stable id, e.g. finance.accounting_method."
+          },
+          "area": {
+            "type": "string",
+            "enum": [
+              "identity",
+              "offering",
+              "customers",
+              "revenue",
+              "operations",
+              "departments",
+              "roles",
+              "finance",
+              "sales_marketing",
+              "tools",
+              "data",
+              "information_flow",
+              "compliance",
+              "goals"
+            ],
+            "title": "Area"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "purpose": {
+            "type": "string",
+            "title": "Purpose",
+            "description": "Why the partner asks: what the answer lets it set up."
+          },
+          "fills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Fills",
+            "description": "Profile fields the answer informs, e.g. financials.accounting_method."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "area",
+          "text",
+          "purpose",
+          "fills"
+        ],
+        "title": "Question"
       },
       "Review": {
         "properties": {
@@ -7812,6 +13130,212 @@
           "decision"
         ],
         "title": "ReviewRequest"
+      },
+      "Role": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Title",
+            "description": "e.g. Bookkeeper, Sales rep."
+          },
+          "department": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Department"
+          },
+          "people": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "People",
+            "description": "Who holds the role (names or 'owner')."
+          },
+          "duties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Duties"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tools",
+            "description": "Names from `BusinessProfile.tools`."
+          },
+          "reports_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reports To",
+            "description": "Title of another role."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "Role"
+      },
+      "RowPage": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rowids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Rowids",
+            "description": "The key of each row, in the order of `rows`; empty for a table without rowids (WITHOUT ROWID), whose rows change through SQL only."
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Rows"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total",
+            "description": "Rows in the table."
+          }
+        },
+        "type": "object",
+        "required": [
+          "columns",
+          "rowids",
+          "rows",
+          "total"
+        ],
+        "title": "RowPage"
+      },
+      "RowWrite": {
+        "properties": {
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "minProperties": 1,
+            "title": "Values",
+            "description": "Column name -> value."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "title": "RowWrite"
+      },
+      "RunRequest": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Messages",
+            "description": "The task or conversation."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "messages"
+        ],
+        "title": "RunRequest"
+      },
+      "RunResponse": {
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/ChatMessage"
+          },
+          "tool_runs": {
+            "items": {
+              "$ref": "#/components/schemas/ToolRun"
+            },
+            "type": "array",
+            "title": "Tool Runs"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "usage": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Usage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "tool_runs",
+          "model"
+        ],
+        "title": "RunResponse"
       },
       "SSA1099": {
         "properties": {
@@ -8781,6 +14305,24 @@
         ],
         "title": "Source"
       },
+      "SourceRef": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "title"
+        ],
+        "title": "SourceRef"
+      },
       "StateTaxRow": {
         "properties": {
           "state": {
@@ -8836,6 +14378,59 @@
         "title": "StateTaxRow",
         "description": "State/local information block common to 1099-series forms."
       },
+      "TableCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/Column"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Columns",
+            "description": "An integer `id` key is added."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "columns"
+        ],
+        "title": "TableCreate"
+      },
+      "TableInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/Column"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "columns",
+          "rows"
+        ],
+        "title": "TableInfo"
+      },
       "ToolCallInfo": {
         "properties": {
           "name": {
@@ -8856,6 +14451,225 @@
           "arguments"
         ],
         "title": "ToolCallInfo"
+      },
+      "ToolInUse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "description": "e.g. QuickBooks, Gmail, Shopify."
+          },
+          "category": {
+            "type": "string",
+            "title": "Category",
+            "description": "e.g. accounting, email, CRM, storefront.",
+            "default": ""
+          },
+          "used_for": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Used For",
+            "default": ""
+          },
+          "departments": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Departments"
+          },
+          "listing_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Id",
+            "description": "Store listing that connects it, when there is one."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ToolInUse"
+      },
+      "ToolRun": {
+        "properties": {
+          "connector_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connector Id",
+            "description": "None for built-in tools (documents, notes)."
+          },
+          "tool": {
+            "type": "string",
+            "title": "Tool"
+          },
+          "arguments": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Arguments"
+          },
+          "read_only": {
+            "type": "boolean",
+            "title": "Read Only"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "ran",
+              "pending_approval",
+              "denied",
+              "failed"
+            ],
+            "title": "Outcome"
+          },
+          "approval_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Id"
+          },
+          "result": {
+            "type": "string",
+            "title": "Result",
+            "description": "What the model read (truncated)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "connector_id",
+          "tool",
+          "arguments",
+          "read_only",
+          "outcome",
+          "result"
+        ],
+        "title": "ToolRun"
+      },
+      "UiEntity": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "description": "e.g. document, assistant, connector, approval."
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "UiEntity"
+      },
+      "UiEvent": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "navigate",
+              "select",
+              "action",
+              "error",
+              "idle"
+            ],
+            "title": "Type"
+          },
+          "page": {
+            "type": "string",
+            "title": "Page"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target",
+            "description": "What was acted on, e.g. 'button:Upload' or an entity id."
+          },
+          "detail": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Detail"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "page",
+          "at"
+        ],
+        "title": "UiEvent"
+      },
+      "UiState": {
+        "properties": {
+          "page": {
+            "type": "string",
+            "title": "Page",
+            "description": "Route path, e.g. /connectors."
+          },
+          "entity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UiEntity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Detail",
+            "description": "Page-specific state, e.g. {filter: 'pending'}."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "page"
+        ],
+        "title": "UiState",
+        "description": "What the user is looking at: sent with partner messages and hint requests."
       },
       "ValidationError": {
         "properties": {
@@ -9348,6 +15162,120 @@
         },
         "type": "object",
         "title": "W2StateRow"
+      },
+      "WorkspaceSummary": {
+        "properties": {
+          "business_name": {
+            "type": "string",
+            "title": "Business Name"
+          },
+          "profile_fields": {
+            "type": "integer",
+            "title": "Profile Fields",
+            "description": "Profile sections with content."
+          },
+          "profile_total": {
+            "type": "integer",
+            "title": "Profile Total"
+          },
+          "interview": {
+            "$ref": "#/components/schemas/InterviewState"
+          },
+          "documents": {
+            "type": "integer",
+            "title": "Documents"
+          },
+          "organized_documents": {
+            "type": "integer",
+            "title": "Organized Documents"
+          },
+          "assistants": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "draft",
+                "active",
+                "paused"
+              ]
+            },
+            "type": "object",
+            "title": "Assistants"
+          },
+          "connectors": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "propertyNames": {
+              "enum": [
+                "untested",
+                "connected",
+                "needs_auth",
+                "error"
+              ]
+            },
+            "type": "object",
+            "title": "Connectors"
+          },
+          "pending_approvals": {
+            "type": "integer",
+            "title": "Pending Approvals"
+          },
+          "recommended_connectors": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorListing"
+            },
+            "type": "array",
+            "title": "Recommended Connectors",
+            "description": "Store listings for tools the business uses that are not installed yet."
+          }
+        },
+        "type": "object",
+        "required": [
+          "business_name",
+          "profile_fields",
+          "profile_total",
+          "interview",
+          "documents",
+          "organized_documents",
+          "assistants",
+          "connectors",
+          "pending_approvals",
+          "recommended_connectors"
+        ],
+        "title": "WorkspaceSummary"
+      },
+      "WritePolicy": {
+        "properties": {
+          "default": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "ask",
+              "deny"
+            ],
+            "title": "Default",
+            "default": "ask"
+          },
+          "tools": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "ask",
+                "deny"
+              ]
+            },
+            "type": "object",
+            "title": "Tools",
+            "description": "Per tool, keyed `<connector id>/<tool name>`; overrides `default`."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "WritePolicy",
+        "description": "What happens when the assistant calls a tool that changes something. Reads always run."
       }
     },
     "securitySchemes": {

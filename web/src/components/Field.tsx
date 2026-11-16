@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import styles from "./Field.module.css";
 
 /** A label above a control, with an optional hint or error below. */
@@ -18,4 +18,8 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
 
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return <select {...props} className={[styles.control, styles.select, className].filter(Boolean).join(" ")} />;
+}
+
+export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea {...props} className={[styles.control, styles.textarea, className].filter(Boolean).join(" ")} />;
 }

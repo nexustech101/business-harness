@@ -422,9 +422,688 @@ export interface paths {
          *     documents, classify or re-extract a stored file) on the documents this key
          *     may read, within `scope`, then answers citing search excerpts as [n].
          *     `sources` lists every excerpt it retrieved under those numbers;
-         *     `tool_calls` lists the tools it ran.
+         *     `tool_calls` lists the tools it ran. The workspace's own records
+         *     (business profile, discovery answers, notes) are part of what it searches.
          */
         post: operations["chat_v1_assistant_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Workspace
+         * @description Where the workspace stands: profile and interview progress, documents, assistants, connectors, approvals,
+         *     and store listings for tools the business uses that are not connected yet.
+         */
+        get: operations["workspace_v1_workspace_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workspace/hints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hints
+         * @description Contextual suggestions for the screen in `state`, given the recent `events` and the workspace.
+         */
+        post: operations["hints_v1_workspace_hints_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/business/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile */
+        get: operations["get_profile_v1_business_profile_get"];
+        /**
+         * Put Profile
+         * @description Replace the profile (the owner's edits). `updated_at` is set by the server.
+         */
+        put: operations["put_profile_v1_business_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/business/interview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Interview
+         * @description Progress per area of the question bank and the next questions to ask.
+         */
+        get: operations["get_interview_v1_business_interview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/business/interview/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer
+         * @description Record (or replace) the answer to one question.
+         */
+        post: operations["answer_v1_business_interview_answers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/partner/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Partner Chat
+         * @description Talk to the business partner. Stateless: send the conversation so far, ending with the owner's message, and
+         *     the screen it was sent from. The partner interviews the owner from the question bank, records answers and
+         *     profile facts, organizes uploaded documents, recommends connectors and drafts assistants (JSON specs the
+         *     owner activates).
+         */
+        post: operations["partner_chat_v1_partner_chat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/business/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Documents
+         * @description Library documents placed in the profile (department, kind, summary).
+         */
+        get: operations["documents_v1_business_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/business/documents/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Organize
+         * @description Place a library document in the profile, or move it.
+         */
+        put: operations["organize_v1_business_documents__document_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/business/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Notes
+         * @description The shared notes board: facts, hand-offs and reports the assistants post per topic, newest first.
+         */
+        get: operations["notes_v1_business_notes_get"];
+        put?: never;
+        /**
+         * Post Note
+         * @description Post a note as the owner; assistants sharing the topic read it.
+         */
+        post: operations["post_note_v1_business_notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistants/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Spec Schema
+         * @description JSON Schema of an assistant spec: what `POST /v1/assistants` takes.
+         */
+        get: operations["spec_schema_v1_assistants_schema_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Assistants */
+        get: operations["list_assistants_v1_assistants_get"];
+        put?: never;
+        /**
+         * Create Assistant
+         * @description Create an assistant from its JSON spec. It starts as a `draft`; activate it to run it.
+         */
+        post: operations["create_assistant_v1_assistants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistants/{assistant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Assistant */
+        get: operations["get_assistant_v1_assistants__assistant_id__get"];
+        /**
+         * Update Assistant
+         * @description Replace the spec; the status stays.
+         */
+        put: operations["update_assistant_v1_assistants__assistant_id__put"];
+        post?: never;
+        /** Delete Assistant */
+        delete: operations["delete_assistant_v1_assistants__assistant_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistants/{assistant_id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Status
+         * @description Activate, pause, or return to draft.
+         */
+        put: operations["set_status_v1_assistants__assistant_id__status_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistants/{assistant_id}/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Context
+         * @description Exactly what the assistant's model receives before a task: context layers and offered tools.
+         */
+        get: operations["context_v1_assistants__assistant_id__context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistants/{assistant_id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Run
+         * @description Give an active assistant a task. Read-only tool calls run; write calls follow its policy: `auto` runs,
+         *     `ask` queues an approval (the assistant is told it is pending), `deny` refuses.
+         */
+        post: operations["run_v1_assistants__assistant_id__run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Approvals */
+        get: operations["approvals_v1_approvals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/approvals/{approval_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide
+         * @description Approve (the call runs now; `always` also sets the tool to `auto` for that assistant) or reject.
+         */
+        post: operations["decide_v1_approvals__approval_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connectors/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catalog
+         * @description The connector store, featured first.
+         */
+        get: operations["catalog_v1_connectors_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Connectors */
+        get: operations["list_connectors_v1_connectors_get"];
+        put?: never;
+        /**
+         * Add Connector
+         * @description Add a connector from the store (`listing_id`) or by hand, then check it (the result is in `status`).
+         *     stdio connectors run a command on the server: admin keys only.
+         */
+        post: operations["add_connector_v1_connectors_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connectors/{connector_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Connector */
+        delete: operations["remove_connector_v1_connectors__connector_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connectors/{connector_id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check
+         * @description Connect and list its tools; `status`, `error` and `tool_count` are updated.
+         */
+        post: operations["check_v1_connectors__connector_id__check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connectors/{connector_id}/tools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tools */
+        get: operations["tools_v1_connectors__connector_id__tools_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connectors/{connector_id}/oauth": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Oauth
+         * @description Start the provider's sign-in; open `authorize_url` in the browser.
+         */
+        post: operations["start_oauth_v1_connectors__connector_id__oauth_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/databases/{connector_id}/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tables
+         * @description Every table with its columns and row count.
+         */
+        get: operations["tables_v1_databases__connector_id__tables_get"];
+        put?: never;
+        /**
+         * Create Table
+         * @description Create a table; an integer `id` key column is added.
+         */
+        post: operations["create_table_v1_databases__connector_id__tables_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/databases/{connector_id}/tables/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import Table
+         * @description A new table from a CSV file: the header names the columns, their types follow from the values.
+         */
+        post: operations["import_table_v1_databases__connector_id__tables_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/databases/{connector_id}/tables/{table}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Drop Table
+         * @description Delete a table with all its rows.
+         */
+        delete: operations["drop_table_v1_databases__connector_id__tables__table__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/databases/{connector_id}/tables/{table}/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rows
+         * @description A page of rows in key order; `rowids` are the keys the row routes take.
+         */
+        get: operations["rows_v1_databases__connector_id__tables__table__rows_get"];
+        put?: never;
+        /**
+         * Insert Row
+         * @description Insert one row; returns its rowid.
+         */
+        post: operations["insert_row_v1_databases__connector_id__tables__table__rows_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/databases/{connector_id}/tables/{table}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Table
+         * @description The whole table as CSV, header first.
+         */
+        get: operations["export_table_v1_databases__connector_id__tables__table__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/databases/{connector_id}/tables/{table}/rows/{rowid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Row
+         * @description Set columns of one row.
+         */
+        put: operations["update_row_v1_databases__connector_id__tables__table__rows__rowid__put"];
+        post?: never;
+        /** Delete Row */
+        delete: operations["delete_row_v1_databases__connector_id__tables__table__rows__rowid__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/databases/{connector_id}/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Query
+         * @description Run one SQL statement: a SELECT, or with `write` a statement that changes the database.
+         */
+        post: operations["query_v1_databases__connector_id__query_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/knowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Knowledge Map
+         * @description Every source in the index with its sections, passage count and how many passages no search or assistant has
+         *     surfaced yet. The totals cover the whole index (within `origin`); `q` and `unused` narrow `items`. The
+         *     workspace's records are brought up to date first.
+         */
+        get: operations["knowledge_map_v1_knowledge_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/knowledge/{document_id}/passages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Passages
+         * @description A source's passages in document order, exactly as indexed, with how often each was retrieved.
+         */
+        get: operations["passages_v1_knowledge__document_id__passages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/knowledge/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Search
+         * @description Search files and workspace records together (meaning and keywords, as `POST /v1/library/search`). One source
+         *     fills at most half of `hits`; `other_sources` names the sources that matched without a passage among them.
+         */
+        post: operations["search_v1_knowledge_search_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -447,6 +1126,13 @@ export interface components {
             postal_code?: string | null;
             /** Country */
             country?: string | null;
+        };
+        /** AnswerRequest */
+        AnswerRequest: {
+            /** Question Id */
+            question_id: string;
+            /** Answer */
+            answer: string;
         };
         /** ApiKeyCreate */
         ApiKeyCreate: {
@@ -495,6 +1181,199 @@ export interface components {
             count: number;
             /** Keys */
             keys: components["schemas"]["ApiKeyInfo"][];
+        };
+        /** Approval */
+        Approval: {
+            /** Id */
+            id: string;
+            /** Assistant Id */
+            assistant_id: string;
+            /** Assistant Name */
+            assistant_name: string;
+            /** Connector Id */
+            connector_id: string;
+            /** Tool */
+            tool: string;
+            /** Arguments */
+            arguments: {
+                [key: string]: unknown;
+            };
+            /**
+             * Reason
+             * @description The assistant's own words on why, from its message before the call.
+             */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "executing" | "rejected" | "executed" | "failed";
+            /**
+             * Result
+             * @description Tool output once executed, or the error.
+             */
+            result: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /** Note */
+            note: string | null;
+        };
+        /** ApprovalDecision */
+        ApprovalDecision: {
+            /** Approve */
+            approve: boolean;
+            /** Note */
+            note?: string | null;
+            /**
+             * Always
+             * @description Approve and set this tool to `auto` for the assistant.
+             * @default false
+             */
+            always: boolean;
+        };
+        /** AreaProgress */
+        AreaProgress: {
+            /**
+             * Area
+             * @enum {string}
+             */
+            area: "identity" | "offering" | "customers" | "revenue" | "operations" | "departments" | "roles" | "finance" | "sales_marketing" | "tools" | "data" | "information_flow" | "compliance" | "goals";
+            /** Label */
+            label: string;
+            /** Answered */
+            answered: number;
+            /** Total */
+            total: number;
+        };
+        /**
+         * AssistantContext
+         * @description What the assistant's model receives before the task: the layers, in order, as sent.
+         */
+        AssistantContext: {
+            /** Layers */
+            layers: components["schemas"]["ContextLayer"][];
+            /**
+             * Tools
+             * @description Tool names offered, `<connector id>/<tool>` for connector tools.
+             */
+            tools: string[];
+            /** Chars */
+            chars: number;
+        };
+        /** AssistantInfo */
+        AssistantInfo: {
+            /** Name */
+            name: string;
+            /**
+             * Role
+             * @description One sentence: what it is responsible for.
+             */
+            role: string;
+            /** Department */
+            department?: string | null;
+            /**
+             * Instructions
+             * @description How it works: steps, rules, tone.
+             * @default
+             */
+            instructions: string;
+            /**
+             * Connectors
+             * @description Ids of installed connectors it may use.
+             */
+            connectors?: string[];
+            knowledge?: components["schemas"]["KnowledgeScope"];
+            /**
+             * Shares
+             * @description Notes-board topics it reads and posts to (shared with other assistants).
+             */
+            shares?: string[];
+            policy?: components["schemas"]["WritePolicy"];
+            /**
+             * Max Tool Rounds
+             * @default 6
+             */
+            max_tool_rounds: number;
+            /** Id */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "active" | "paused";
+            /**
+             * Created By
+             * @enum {string}
+             */
+            created_by: "owner" | "partner";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * AssistantSpec
+         * @description An assistant is this JSON object. The partner creates them; the owner can write or edit one by hand.
+         *
+         *     {"name": "Accountant", "role": "Keeps the books and prepares the monthly report",
+         *      "department": "Finance", "instructions": "...", "connectors": ["<connector id>"],
+         *      "knowledge": {"departments": ["Finance"]}, "shares": ["finance", "month-end"],
+         *      "policy": {"default": "ask", "tools": {"<connector id>/list_invoices": "auto"}}}
+         */
+        AssistantSpec: {
+            /** Name */
+            name: string;
+            /**
+             * Role
+             * @description One sentence: what it is responsible for.
+             */
+            role: string;
+            /** Department */
+            department?: string | null;
+            /**
+             * Instructions
+             * @description How it works: steps, rules, tone.
+             * @default
+             */
+            instructions: string;
+            /**
+             * Connectors
+             * @description Ids of installed connectors it may use.
+             */
+            connectors?: string[];
+            knowledge?: components["schemas"]["KnowledgeScope"];
+            /**
+             * Shares
+             * @description Notes-board topics it reads and posts to (shared with other assistants).
+             */
+            shares?: string[];
+            policy?: components["schemas"]["WritePolicy"];
+            /**
+             * Max Tool Rounds
+             * @default 6
+             */
+            max_tool_rounds: number;
+        };
+        /** AssistantStatusRequest */
+        AssistantStatusRequest: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "active" | "paused";
         };
         /** Body_add_document_v1_library_documents_post */
         Body_add_document_v1_library_documents_post: {
@@ -556,6 +1435,19 @@ export interface components {
             /**
              * File
              * @description PDF, PNG, JPEG, TIFF, BMP or WEBP
+             */
+            file: string;
+        };
+        /** Body_import_table_v1_databases__connector_id__tables_import_post */
+        Body_import_table_v1_databases__connector_id__tables_import_post: {
+            /**
+             * Name
+             * @description The new table's name.
+             */
+            name: string;
+            /**
+             * File
+             * @description UTF-8 CSV with a header row.
              */
             file: string;
         };
@@ -669,6 +1561,75 @@ export interface components {
             by_type: {
                 [key: string]: number;
             };
+        };
+        /**
+         * BusinessProfile
+         * @description What the partner knows about the business. Filled from the interview and documents; the owner can edit it.
+         */
+        BusinessProfile: {
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Summary
+             * @description What the business does, in a few sentences.
+             * @default
+             */
+            summary: string;
+            /**
+             * Industry
+             * @default
+             */
+            industry: string;
+            /**
+             * Business Model
+             * @description How it makes money.
+             * @default
+             */
+            business_model: string;
+            /**
+             * Offerings
+             * @description Products and services.
+             */
+            offerings?: string[];
+            /**
+             * Customers
+             * @description Who buys, and how they find the business.
+             * @default
+             */
+            customers: string;
+            /** Locations */
+            locations?: string[];
+            /** Team Size */
+            team_size?: number | null;
+            /**
+             * Stage
+             * @description e.g. solo, growing, established.
+             * @default
+             */
+            stage: string;
+            /** Goals */
+            goals?: string[];
+            /** Pain Points */
+            pain_points?: string[];
+            /** Departments */
+            departments?: components["schemas"]["Department"][];
+            /** Roles */
+            roles?: components["schemas"]["Role"][];
+            /** Tools */
+            tools?: components["schemas"]["ToolInUse"][];
+            /** Flows */
+            flows?: components["schemas"]["InformationFlow"][];
+            financials?: components["schemas"]["Financials"];
+            /**
+             * Compliance
+             * @description Licenses, regulations, filing duties.
+             */
+            compliance?: string[];
+            /** Updated At */
+            updated_at?: string | null;
         };
         /** ChatMessage */
         ChatMessage: {
@@ -821,6 +1782,217 @@ export interface components {
              */
             amount?: string | null;
         };
+        /** Column */
+        Column: {
+            /**
+             * Name
+             * @description Letters, digits and _.
+             */
+            name: string;
+            /**
+             * Type
+             * @default text
+             * @enum {string}
+             */
+            type: "text" | "integer" | "real" | "date" | "boolean";
+            /**
+             * Required
+             * @description NOT NULL.
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Primary Key
+             * @description Set by the database; ignored on create.
+             * @default false
+             */
+            primary_key: boolean;
+        };
+        /**
+         * ConnectorCreate
+         * @description Add a connector: from the store (`listing_id`) or by hand.
+         */
+        ConnectorCreate: {
+            /** Listing Id */
+            listing_id?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Transport
+             * @description `builtin` only through a store listing.
+             * @default streamable_http
+             * @enum {string}
+             */
+            transport: "streamable_http" | "sse" | "stdio" | "builtin";
+            /**
+             * Url
+             * @description Remote servers.
+             */
+            url?: string | null;
+            /**
+             * Command
+             * @description stdio servers (admin keys only).
+             */
+            command?: string | null;
+            /** Args */
+            args?: string[];
+            /**
+             * Auth
+             * @default none
+             * @enum {string}
+             */
+            auth: "none" | "bearer" | "oauth";
+            /**
+             * Token
+             * @description Bearer token or API key; stored encrypted, never returned.
+             */
+            token?: string | null;
+        };
+        /** ConnectorInfo */
+        ConnectorInfo: {
+            /** Id */
+            id: string;
+            /** Listing Id */
+            listing_id: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Transport
+             * @enum {string}
+             */
+            transport: "streamable_http" | "sse" | "stdio" | "builtin";
+            /** Url */
+            url: string | null;
+            /** Command */
+            command: string | null;
+            /** Args */
+            args: string[];
+            /**
+             * Auth
+             * @enum {string}
+             */
+            auth: "none" | "bearer" | "oauth";
+            /** Has Secret */
+            has_secret: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "untested" | "connected" | "needs_auth" | "error";
+            /** Error */
+            error: string | null;
+            /** Tool Count */
+            tool_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Checked At */
+            checked_at: string | null;
+        };
+        /**
+         * ConnectorListing
+         * @description An entry of the connector store.
+         */
+        ConnectorListing: {
+            /**
+             * Id
+             * @description e.g. stripe, google-drive.
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Publisher */
+            publisher: string;
+            /**
+             * Category
+             * @description e.g. Storage, Payments, CRM, Productivity, Data, Automation.
+             */
+            category: string;
+            /**
+             * Also In
+             * @description Further categories it is listed under.
+             */
+            also_in?: string[];
+            /**
+             * Tagline
+             * @description One line on what assistants do with it.
+             * @default
+             */
+            tagline: string;
+            /**
+             * Description
+             * @description How to connect it: where its URL and credentials come from.
+             */
+            description: string;
+            /**
+             * Builtin
+             * @description Runs inside this app: no server, URL or sign-in.
+             * @default false
+             */
+            builtin: boolean;
+            /** Capabilities */
+            capabilities: string[];
+            /**
+             * Availability
+             * @description As the publisher states it, e.g. 'Official, read-only'.
+             */
+            availability: string;
+            /**
+             * Docs Url
+             * @description The publisher's setup page; empty for built-in apps.
+             */
+            docs_url: string;
+            /**
+             * Transport
+             * @enum {string}
+             */
+            transport: "streamable_http" | "sse" | "stdio" | "builtin";
+            /**
+             * Url
+             * @description Server URL for remote servers; None when it depends on the account.
+             */
+            url: string | null;
+            /**
+             * Auth
+             * @enum {string}
+             */
+            auth: "none" | "bearer" | "oauth";
+            /**
+             * Featured
+             * @default false
+             */
+            featured: boolean;
+        };
+        /** ConnectorTool */
+        ConnectorTool: {
+            /** Connector Id */
+            connector_id: string;
+            /** Name */
+            name: string;
+            /** Description */
+            description: string;
+            /**
+             * Read Only
+             * @description The server marks it read-only (MCP `readOnlyHint`); otherwise a write.
+             */
+            read_only: boolean;
+            /** Input Schema */
+            input_schema: {
+                [key: string]: unknown;
+            };
+        };
+        /** ContextLayer */
+        ContextLayer: {
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "business" | "role" | "team" | "notes";
+            /** Text */
+            text: string;
+        };
         /** CoveredIndividual */
         CoveredIndividual: {
             /**
@@ -848,6 +2020,26 @@ export interface components {
              * @description Coverage termination date
              */
             coverage_termination_date?: string | null;
+        };
+        /** Department */
+        Department: {
+            /**
+             * Name
+             * @description e.g. Finance, Sales, Operations.
+             */
+            name: string;
+            /**
+             * Purpose
+             * @default
+             */
+            purpose: string;
+            /**
+             * Head
+             * @description Title of the role that leads it.
+             */
+            head?: string | null;
+            /** Responsibilities */
+            responsibilities?: string[];
         };
         /** DescribedAmount */
         DescribedAmount: {
@@ -1001,9 +2193,25 @@ export interface components {
         Envelope_ApiKeyList_: {
             data: components["schemas"]["ApiKeyList"];
         };
+        /** Envelope[Approval] */
+        Envelope_Approval_: {
+            data: components["schemas"]["Approval"];
+        };
+        /** Envelope[AssistantContext] */
+        Envelope_AssistantContext_: {
+            data: components["schemas"]["AssistantContext"];
+        };
+        /** Envelope[AssistantInfo] */
+        Envelope_AssistantInfo_: {
+            data: components["schemas"]["AssistantInfo"];
+        };
         /** Envelope[BulkExtractResponse] */
         Envelope_BulkExtractResponse_: {
             data: components["schemas"]["BulkExtractResponse"];
+        };
+        /** Envelope[BusinessProfile] */
+        Envelope_BusinessProfile_: {
+            data: components["schemas"]["BusinessProfile"];
         };
         /** Envelope[ChatResponse] */
         Envelope_ChatResponse_: {
@@ -1016,6 +2224,10 @@ export interface components {
         /** Envelope[ClassifyResponse] */
         Envelope_ClassifyResponse_: {
             data: components["schemas"]["ClassifyResponse"];
+        };
+        /** Envelope[ConnectorInfo] */
+        Envelope_ConnectorInfo_: {
+            data: components["schemas"]["ConnectorInfo"];
         };
         /** Envelope[DocumentDetail] */
         Envelope_DocumentDetail_: {
@@ -1037,18 +2249,126 @@ export interface components {
         Envelope_HealthResponse_: {
             data: components["schemas"]["HealthResponse"];
         };
+        /** Envelope[HintsResponse] */
+        Envelope_HintsResponse_: {
+            data: components["schemas"]["HintsResponse"];
+        };
+        /** Envelope[InterviewState] */
+        Envelope_InterviewState_: {
+            data: components["schemas"]["InterviewState"];
+        };
+        /** Envelope[KnowledgeMap] */
+        Envelope_KnowledgeMap_: {
+            data: components["schemas"]["KnowledgeMap"];
+        };
+        /** Envelope[KnowledgeSearchResponse] */
+        Envelope_KnowledgeSearchResponse_: {
+            data: components["schemas"]["KnowledgeSearchResponse"];
+        };
         /** Envelope[LibraryStats] */
         Envelope_LibraryStats_: {
             data: components["schemas"]["LibraryStats"];
+        };
+        /** Envelope[Note] */
+        Envelope_Note_: {
+            data: components["schemas"]["Note"];
+        };
+        /** Envelope[OAuthStart] */
+        Envelope_OAuthStart_: {
+            data: components["schemas"]["OAuthStart"];
+        };
+        /** Envelope[OrganizedDocument] */
+        Envelope_OrganizedDocument_: {
+            data: components["schemas"]["OrganizedDocument"];
+        };
+        /** Envelope[PartnerResponse] */
+        Envelope_PartnerResponse_: {
+            data: components["schemas"]["PartnerResponse"];
+        };
+        /** Envelope[PassageList] */
+        Envelope_PassageList_: {
+            data: components["schemas"]["PassageList"];
+        };
+        /** Envelope[QueryResult] */
+        Envelope_QueryResult_: {
+            data: components["schemas"]["QueryResult"];
+        };
+        /** Envelope[RowPage] */
+        Envelope_RowPage_: {
+            data: components["schemas"]["RowPage"];
+        };
+        /** Envelope[RunResponse] */
+        Envelope_RunResponse_: {
+            data: components["schemas"]["RunResponse"];
         };
         /** Envelope[SearchResponse] */
         Envelope_SearchResponse_: {
             data: components["schemas"]["SearchResponse"];
         };
+        /** Envelope[TableInfo] */
+        Envelope_TableInfo_: {
+            data: components["schemas"]["TableInfo"];
+        };
+        /** Envelope[WorkspaceSummary] */
+        Envelope_WorkspaceSummary_: {
+            data: components["schemas"]["WorkspaceSummary"];
+        };
+        /** Envelope[dict] */
+        Envelope_dict_: {
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+        };
+        /** Envelope[int] */
+        Envelope_int_: {
+            /** Data */
+            data: number;
+        };
+        /** Envelope[list[Approval]] */
+        Envelope_list_Approval__: {
+            /** Data */
+            data: components["schemas"]["Approval"][];
+        };
+        /** Envelope[list[AssistantInfo]] */
+        Envelope_list_AssistantInfo__: {
+            /** Data */
+            data: components["schemas"]["AssistantInfo"][];
+        };
+        /** Envelope[list[ConnectorInfo]] */
+        Envelope_list_ConnectorInfo__: {
+            /** Data */
+            data: components["schemas"]["ConnectorInfo"][];
+        };
+        /** Envelope[list[ConnectorListing]] */
+        Envelope_list_ConnectorListing__: {
+            /** Data */
+            data: components["schemas"]["ConnectorListing"][];
+        };
+        /** Envelope[list[ConnectorTool]] */
+        Envelope_list_ConnectorTool__: {
+            /** Data */
+            data: components["schemas"]["ConnectorTool"][];
+        };
         /** Envelope[list[DocumentType]] */
         Envelope_list_DocumentType__: {
             /** Data */
             data: components["schemas"]["DocumentType"][];
+        };
+        /** Envelope[list[Note]] */
+        Envelope_list_Note__: {
+            /** Data */
+            data: components["schemas"]["Note"][];
+        };
+        /** Envelope[list[OrganizedDocument]] */
+        Envelope_list_OrganizedDocument__: {
+            /** Data */
+            data: components["schemas"]["OrganizedDocument"][];
+        };
+        /** Envelope[list[TableInfo]] */
+        Envelope_list_TableInfo__: {
+            /** Data */
+            data: components["schemas"]["TableInfo"][];
         };
         /** ErrorBody */
         ErrorBody: {
@@ -1107,6 +2427,40 @@ export interface components {
          * @enum {string}
          */
         FileType: "pdf" | "image" | "txt" | "md" | "csv" | "xlsx";
+        /** Financials */
+        Financials: {
+            /** Revenue Streams */
+            revenue_streams?: string[];
+            /** Cost Centers */
+            cost_centers?: string[];
+            /**
+             * Pricing
+             * @default
+             */
+            pricing: string;
+            /**
+             * Currency
+             * @default USD
+             */
+            currency: string;
+            /**
+             * Fiscal Year End
+             * @description e.g. December 31.
+             * @default
+             */
+            fiscal_year_end: string;
+            /**
+             * Accounting Method
+             * @default
+             * @enum {string}
+             */
+            accounting_method: "" | "cash" | "accrual";
+            /**
+             * Reporting
+             * @description Reports the business produces, e.g. monthly P&L.
+             */
+            reporting?: string[];
+        };
         /**
          * Flag
          * @description Something a reviewer should check.
@@ -2338,6 +3692,103 @@ export interface components {
             /** Models */
             models: components["schemas"]["ModelStatus"][];
         };
+        /** Hint */
+        Hint: {
+            /**
+             * Id
+             * @description Stable per suggestion, so the dashboard can remember dismissals.
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Body */
+            body: string;
+            /**
+             * Tone
+             * @enum {string}
+             */
+            tone: "info" | "suggestion" | "warning";
+            action?: components["schemas"]["HintAction"] | null;
+        };
+        /** HintAction */
+        HintAction: {
+            /** Label */
+            label: string;
+            /**
+             * Href
+             * @description Dashboard path to open, e.g. /connectors?add=stripe.
+             */
+            href: string;
+        };
+        /** HintsRequest */
+        HintsRequest: {
+            state: components["schemas"]["UiState"];
+            /**
+             * Events
+             * @description Recent events, oldest first.
+             */
+            events?: components["schemas"]["UiEvent"][];
+        };
+        /** HintsResponse */
+        HintsResponse: {
+            /**
+             * Hints
+             * @description Most relevant first, at most 3.
+             */
+            hints: components["schemas"]["Hint"][];
+        };
+        /**
+         * InformationFlow
+         * @description Information one part of the business passes to another (a report, a hand-off, a shared record).
+         */
+        InformationFlow: {
+            /**
+             * Source
+             * @description Department or role that produces it.
+             */
+            source: string;
+            /**
+             * Target
+             * @description Department or role that uses it.
+             */
+            target: string;
+            /**
+             * What
+             * @description e.g. weekly sales report, new order, invoice.
+             */
+            what: string;
+            /**
+             * Cadence
+             * @description e.g. per order, weekly, month end.
+             * @default
+             */
+            cadence: string;
+            /**
+             * Via
+             * @description Tool or channel, e.g. Slack, a shared sheet.
+             * @default
+             */
+            via: string;
+        };
+        /** InterviewState */
+        InterviewState: {
+            /** Answered */
+            answered: number;
+            /** Total */
+            total: number;
+            /**
+             * Complete
+             * @description Every area has its required questions answered.
+             */
+            complete: boolean;
+            /** Areas */
+            areas: components["schemas"]["AreaProgress"][];
+            /**
+             * Next
+             * @description What to ask next, most useful first (at most 5).
+             */
+            next: components["schemas"]["Question"][];
+        };
         /** K1CapitalAccount */
         K1CapitalAccount: {
             /**
@@ -2370,6 +3821,116 @@ export interface components {
              * @description Item L: Ending capital account
              */
             ending_capital_account?: string | null;
+        };
+        /**
+         * KnowledgeMap
+         * @description Everything the index holds, so nothing depends on being found by a search.
+         */
+        KnowledgeMap: {
+            /**
+             * Sources
+             * @description Sources in the index.
+             */
+            sources: number;
+            /**
+             * Passages
+             * @description Indexed passages over all sources.
+             */
+            passages: number;
+            /**
+             * Never Retrieved
+             * @description Passages no search or assistant has surfaced yet.
+             */
+            never_retrieved: number;
+            /**
+             * Count
+             * @description Sources matching the request's filters.
+             */
+            count: number;
+            /**
+             * Items
+             * @description A page of the matching sources.
+             */
+            items: components["schemas"]["KnowledgeSource"][];
+        };
+        /**
+         * KnowledgeScope
+         * @description Which organized documents the assistant can search. Empty lists: no limit.
+         */
+        KnowledgeScope: {
+            /** Departments */
+            departments?: string[];
+            /** Document Kinds */
+            document_kinds?: string[];
+        };
+        /** KnowledgeSearchRequest */
+        KnowledgeSearchRequest: {
+            /** Query */
+            query: string;
+            filters?: components["schemas"]["SearchFilters"];
+            /** Limit */
+            limit?: number | null;
+        };
+        /** KnowledgeSearchResponse */
+        KnowledgeSearchResponse: {
+            /** Hits */
+            hits: components["schemas"]["SearchHit"][];
+            /**
+             * Other Sources
+             * @description Sources that also matched but have no passage among `hits`: open them to read more.
+             */
+            other_sources: components["schemas"]["SourceRef"][];
+        };
+        /**
+         * KnowledgeSource
+         * @description One source of the index: an uploaded document, or a workspace record (profile, discovery answers, notes).
+         */
+        KnowledgeSource: {
+            /** Document Id */
+            document_id: string;
+            /** Title */
+            title: string;
+            type: components["schemas"]["FileType"];
+            /** Location */
+            location: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Passages
+             * @description Indexed passages (chunks).
+             */
+            passages: number;
+            /**
+             * Never Retrieved
+             * @description Passages no search result or assistant read has surfaced yet.
+             */
+            never_retrieved: number;
+            /** Last Retrieved At */
+            last_retrieved_at: string | null;
+            /**
+             * Sections
+             * @description Its section titles, in document order (the first ones).
+             */
+            sections: string[];
+            /**
+             * Origin
+             * @description upload: a file; workspace: what the partner and owner recorded.
+             * @enum {string}
+             */
+            origin: "upload" | "workspace";
+            /**
+             * Department
+             * @description Where the partner filed it, when organized.
+             */
+            department?: string | null;
+            /**
+             * Kind
+             * @description e.g. invoice, contract, SOP; set when organized.
+             */
+            kind?: string | null;
         };
         /**
          * LibraryDocument
@@ -2492,6 +4053,79 @@ export interface components {
              */
             advance_ptc?: string | null;
         };
+        /**
+         * Note
+         * @description A fact, hand-off or report one assistant (or the owner) shares on a topic.
+         */
+        Note: {
+            /** Id */
+            id: string;
+            /** Topic */
+            topic: string;
+            /** Text */
+            text: string;
+            /**
+             * Author
+             * @description Assistant name, 'partner' or 'owner'.
+             */
+            author: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** NoteCreate */
+        NoteCreate: {
+            /** Topic */
+            topic: string;
+            /** Text */
+            text: string;
+        };
+        /** OAuthStart */
+        OAuthStart: {
+            /**
+             * Authorize Url
+             * @description Open it; the provider redirects back to /v1/connectors/oauth/callback.
+             */
+            authorize_url: string;
+        };
+        /** OrganizeRequest */
+        OrganizeRequest: {
+            /** Department */
+            department?: string | null;
+            /** Kind */
+            kind: string;
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+        };
+        /**
+         * OrganizedDocument
+         * @description A library document placed in the business profile by the partner (or the owner).
+         */
+        OrganizedDocument: {
+            /** Document Id */
+            document_id: string;
+            /** Title */
+            title: string;
+            /** Department */
+            department: string | null;
+            /**
+             * Kind
+             * @description e.g. invoice, contract, SOP, price list, report.
+             */
+            kind: string;
+            /** Summary */
+            summary: string;
+            /**
+             * Organized At
+             * Format: date-time
+             */
+            organized_at: string;
+        };
         /** PageInfo */
         PageInfo: {
             /**
@@ -2510,6 +4144,47 @@ export interface components {
              */
             height: number;
         };
+        /** PartnerRequest */
+        PartnerRequest: {
+            /** Messages */
+            messages: components["schemas"]["ChatMessage"][];
+            /** @description The screen the message was sent from. */
+            ui_state?: components["schemas"]["UiState"] | null;
+        };
+        /** PartnerResponse */
+        PartnerResponse: {
+            message: components["schemas"]["ChatMessage"];
+            /**
+             * Sources
+             * @description Every excerpt `search_documents` retrieved, numbered as cited.
+             */
+            sources: components["schemas"]["Source"][];
+            /**
+             * Tool Calls
+             * @description Tools the assistant ran, in order.
+             */
+            tool_calls: components["schemas"]["ToolCallInfo"][];
+            /** Model */
+            model: string;
+            /**
+             * Usage
+             * @description Token counts as reported by the provider.
+             */
+            usage?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Profile Changed
+             * @description The partner changed the profile; refetch it.
+             */
+            profile_changed: boolean;
+            /**
+             * Assistants Changed
+             * @description The partner created or changed an assistant.
+             */
+            assistants_changed: boolean;
+            interview: components["schemas"]["InterviewState"];
+        };
         /** Party */
         Party: {
             /** Name */
@@ -2522,6 +4197,105 @@ export interface components {
             address?: components["schemas"]["Address"] | null;
             /** Phone */
             phone?: string | null;
+        };
+        /** Passage */
+        Passage: {
+            /** Chunk Id */
+            chunk_id: string;
+            /**
+             * Index
+             * @description Position in the document (0-based).
+             */
+            index: number;
+            /** Section Title */
+            section_title: string;
+            /** Page Number */
+            page_number: number | null;
+            /** Sheet Name */
+            sheet_name: string | null;
+            /** Document Type */
+            document_type: string;
+            /** Content */
+            content: string;
+            /**
+             * Retrievals
+             * @description Times a search or an assistant surfaced it.
+             */
+            retrievals: number;
+            /** Last Retrieved At */
+            last_retrieved_at: string | null;
+        };
+        /** PassageList */
+        PassageList: {
+            /** Document Id */
+            document_id: string;
+            /** Title */
+            title: string;
+            /**
+             * Count
+             * @description Passages in the document.
+             */
+            count: number;
+            /** Passages */
+            passages: components["schemas"]["Passage"][];
+        };
+        /** QueryRequest */
+        QueryRequest: {
+            /**
+             * Sql
+             * @description One SQLite statement.
+             */
+            sql: string;
+            /**
+             * Write
+             * @description False: SELECT only. True: the statement may change data.
+             * @default false
+             */
+            write: boolean;
+        };
+        /** QueryResult */
+        QueryResult: {
+            /** Columns */
+            columns: string[];
+            /** Rows */
+            rows: (boolean | number | string | null)[][];
+            /**
+             * Truncated
+             * @description More rows matched than are returned.
+             * @default false
+             */
+            truncated: boolean;
+            /**
+             * Changed
+             * @description Rows a write statement changed.
+             * @default 0
+             */
+            changed: number;
+        };
+        /** Question */
+        Question: {
+            /**
+             * Id
+             * @description Stable id, e.g. finance.accounting_method.
+             */
+            id: string;
+            /**
+             * Area
+             * @enum {string}
+             */
+            area: "identity" | "offering" | "customers" | "revenue" | "operations" | "departments" | "roles" | "finance" | "sales_marketing" | "tools" | "data" | "information_flow" | "compliance" | "goals";
+            /** Text */
+            text: string;
+            /**
+             * Purpose
+             * @description Why the partner asks: what the answer lets it set up.
+             */
+            purpose: string;
+            /**
+             * Fills
+             * @description Profile fields the answer informs, e.g. financials.accounting_method.
+             */
+            fills: string[];
         };
         /** Review */
         Review: {
@@ -2565,6 +4339,80 @@ export interface components {
             value?: boolean | number | string | null;
             /** Note */
             note?: string | null;
+        };
+        /** Role */
+        Role: {
+            /**
+             * Title
+             * @description e.g. Bookkeeper, Sales rep.
+             */
+            title: string;
+            /** Department */
+            department?: string | null;
+            /**
+             * People
+             * @description Who holds the role (names or 'owner').
+             */
+            people?: string[];
+            /** Duties */
+            duties?: string[];
+            /**
+             * Tools
+             * @description Names from `BusinessProfile.tools`.
+             */
+            tools?: string[];
+            /**
+             * Reports To
+             * @description Title of another role.
+             */
+            reports_to?: string | null;
+        };
+        /** RowPage */
+        RowPage: {
+            /** Columns */
+            columns: string[];
+            /**
+             * Rowids
+             * @description The key of each row, in the order of `rows`; empty for a table without rowids (WITHOUT ROWID), whose rows change through SQL only.
+             */
+            rowids: number[];
+            /** Rows */
+            rows: (boolean | number | string | null)[][];
+            /**
+             * Total
+             * @description Rows in the table.
+             */
+            total: number;
+        };
+        /** RowWrite */
+        RowWrite: {
+            /**
+             * Values
+             * @description Column name -> value.
+             */
+            values: {
+                [key: string]: boolean | number | string | null;
+            };
+        };
+        /** RunRequest */
+        RunRequest: {
+            /**
+             * Messages
+             * @description The task or conversation.
+             */
+            messages: components["schemas"]["ChatMessage"][];
+        };
+        /** RunResponse */
+        RunResponse: {
+            message: components["schemas"]["ChatMessage"];
+            /** Tool Runs */
+            tool_runs: components["schemas"]["ToolRun"][];
+            /** Model */
+            model: string;
+            /** Usage */
+            usage?: {
+                [key: string]: unknown;
+            };
         };
         /** SSA1099 */
         SSA1099: {
@@ -2899,6 +4747,13 @@ export interface components {
              */
             n: number;
         };
+        /** SourceRef */
+        SourceRef: {
+            /** Document Id */
+            document_id: string;
+            /** Title */
+            title: string;
+        };
         /**
          * StateTaxRow
          * @description State/local information block common to 1099-series forms.
@@ -2925,6 +4780,25 @@ export interface components {
              */
             state_tax_withheld?: string | null;
         };
+        /** TableCreate */
+        TableCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Columns
+             * @description An integer `id` key is added.
+             */
+            columns: components["schemas"]["Column"][];
+        };
+        /** TableInfo */
+        TableInfo: {
+            /** Name */
+            name: string;
+            /** Columns */
+            columns: components["schemas"]["Column"][];
+            /** Rows */
+            rows: number;
+        };
         /** ToolCallInfo */
         ToolCallInfo: {
             /**
@@ -2937,6 +4811,118 @@ export interface components {
              * @description Arguments the model passed.
              */
             arguments: {
+                [key: string]: unknown;
+            };
+        };
+        /** ToolInUse */
+        ToolInUse: {
+            /**
+             * Name
+             * @description e.g. QuickBooks, Gmail, Shopify.
+             */
+            name: string;
+            /**
+             * Category
+             * @description e.g. accounting, email, CRM, storefront.
+             * @default
+             */
+            category: string;
+            /**
+             * Used For
+             * @default
+             */
+            used_for: string;
+            /** Departments */
+            departments?: string[];
+            /**
+             * Listing Id
+             * @description Store listing that connects it, when there is one.
+             */
+            listing_id?: string | null;
+        };
+        /** ToolRun */
+        ToolRun: {
+            /**
+             * Connector Id
+             * @description None for built-in tools (documents, notes).
+             */
+            connector_id: string | null;
+            /** Tool */
+            tool: string;
+            /** Arguments */
+            arguments: {
+                [key: string]: unknown;
+            };
+            /** Read Only */
+            read_only: boolean;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "ran" | "pending_approval" | "denied" | "failed";
+            /** Approval Id */
+            approval_id?: string | null;
+            /**
+             * Result
+             * @description What the model read (truncated).
+             */
+            result: string;
+        };
+        /** UiEntity */
+        UiEntity: {
+            /**
+             * Kind
+             * @description e.g. document, assistant, connector, approval.
+             */
+            kind: string;
+            /** Id */
+            id: string;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+        };
+        /** UiEvent */
+        UiEvent: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "navigate" | "select" | "action" | "error" | "idle";
+            /** Page */
+            page: string;
+            /**
+             * Target
+             * @description What was acted on, e.g. 'button:Upload' or an entity id.
+             */
+            target?: string | null;
+            /** Detail */
+            detail?: {
+                [key: string]: unknown;
+            };
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+        };
+        /**
+         * UiState
+         * @description What the user is looking at: sent with partner messages and hint requests.
+         */
+        UiState: {
+            /**
+             * Page
+             * @description Route path, e.g. /connectors.
+             */
+            page: string;
+            entity?: components["schemas"]["UiEntity"] | null;
+            /**
+             * Detail
+             * @description Page-specific state, e.g. {filter: 'pending'}.
+             */
+            detail?: {
                 [key: string]: unknown;
             };
         };
@@ -3134,6 +5120,57 @@ export interface components {
              * @description Box 20: Locality name
              */
             locality_name?: string | null;
+        };
+        /** WorkspaceSummary */
+        WorkspaceSummary: {
+            /** Business Name */
+            business_name: string;
+            /**
+             * Profile Fields
+             * @description Profile sections with content.
+             */
+            profile_fields: number;
+            /** Profile Total */
+            profile_total: number;
+            interview: components["schemas"]["InterviewState"];
+            /** Documents */
+            documents: number;
+            /** Organized Documents */
+            organized_documents: number;
+            /** Assistants */
+            assistants: {
+                [key: string]: number;
+            };
+            /** Connectors */
+            connectors: {
+                [key: string]: number;
+            };
+            /** Pending Approvals */
+            pending_approvals: number;
+            /**
+             * Recommended Connectors
+             * @description Store listings for tools the business uses that are not installed yet.
+             */
+            recommended_connectors: components["schemas"]["ConnectorListing"][];
+        };
+        /**
+         * WritePolicy
+         * @description What happens when the assistant calls a tool that changes something. Reads always run.
+         */
+        WritePolicy: {
+            /**
+             * Default
+             * @default ask
+             * @enum {string}
+             */
+            default: "auto" | "ask" | "deny";
+            /**
+             * Tools
+             * @description Per tool, keyed `<connector id>/<tool name>`; overrides `default`.
+             */
+            tools?: {
+                [key: string]: "auto" | "ask" | "deny";
+            };
         };
     };
     responses: never;
@@ -3381,7 +5418,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request or corrected value */
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3546,7 +5583,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request or corrected value */
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3628,6 +5665,8 @@ export interface operations {
                 review_status?: ("pending" | "approved") | null;
                 /** @description Text in the title or client name. */
                 q?: string | null;
+                /** @description upload: uploaded files (default); workspace: the workspace's own index records (profile, discovery answers, notes). */
+                origin?: ("upload" | "workspace") | null;
             };
             header?: never;
             path?: never;
@@ -3713,7 +5752,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form) */
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3740,7 +5779,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request or corrected value */
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3780,6 +5819,8 @@ export interface operations {
                 review_status?: ("pending" | "approved") | null;
                 /** @description Text in the title or client name. */
                 q?: string | null;
+                /** @description upload: uploaded files (default); workspace: the workspace's own index records (profile, discovery answers, notes). */
+                origin?: ("upload" | "workspace") | null;
             };
             header?: never;
             path?: never;
@@ -4097,7 +6138,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form) */
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4227,7 +6268,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form) */
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4236,7 +6277,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request or corrected value */
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -4295,7 +6336,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form) */
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4362,7 +6403,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form) */
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4420,7 +6461,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form) */
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4471,7 +6512,1992 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, or a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form) */
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server busy, or a model backend is unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    workspace_v1_workspace_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_WorkspaceSummary_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    hints_v1_workspace_hints_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HintsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_HintsResponse_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_profile_v1_business_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_BusinessProfile_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_profile_v1_business_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BusinessProfile"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_BusinessProfile_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_interview_v1_business_interview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_InterviewState_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    answer_v1_business_interview_answers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_InterviewState_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    partner_chat_v1_partner_chat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_PartnerResponse_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server busy, or a model backend is unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    documents_v1_business_documents_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_OrganizedDocument__"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    organize_v1_business_documents__document_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OrganizedDocument_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    notes_v1_business_notes_get: {
+        parameters: {
+            query?: {
+                /** @description One topic; all topics when omitted. */
+                topic?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_Note__"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_note_v1_business_notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NoteCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_Note_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    spec_schema_v1_assistants_schema_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_dict_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_assistants_v1_assistants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_AssistantInfo__"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_assistant_v1_assistants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantSpec"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AssistantInfo_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_assistant_v1_assistants__assistant_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AssistantInfo_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_assistant_v1_assistants__assistant_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantSpec"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AssistantInfo_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_assistant_v1_assistants__assistant_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_status_v1_assistants__assistant_id__status_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AssistantInfo_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    context_v1_assistants__assistant_id__context_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_AssistantContext_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_v1_assistants__assistant_id__run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assistant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RunResponse_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Server busy, or a model backend is unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    approvals_v1_approvals_get: {
+        parameters: {
+            query?: {
+                /** @description Only this status; newest first. */
+                status?: ("pending" | "executing" | "rejected" | "executed" | "failed") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_Approval__"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_v1_approvals__approval_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_Approval_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    catalog_v1_connectors_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_ConnectorListing__"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_connectors_v1_connectors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_ConnectorInfo__"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_connector_v1_connectors_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectorCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ConnectorInfo_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Admin key required */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_connector_v1_connectors__connector_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_v1_connectors__connector_id__check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_ConnectorInfo_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tools_v1_connectors__connector_id__tools_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_ConnectorTool__"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_oauth_v1_connectors__connector_id__oauth_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_OAuthStart_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A connector (MCP server) could not be reached or failed */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    tables_v1_databases__connector_id__tables_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_list_TableInfo__"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_table_v1_databases__connector_id__tables_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TableCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_TableInfo_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    import_table_v1_databases__connector_id__tables_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_table_v1_databases__connector_id__tables_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_TableInfo_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description File, file count or page count over the limit */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    drop_table_v1_databases__connector_id__tables__table__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    rows_v1_databases__connector_id__tables__table__rows_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                connector_id: string;
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_RowPage_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    insert_row_v1_databases__connector_id__tables__table__rows_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RowWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_int_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_table_v1_databases__connector_id__tables__table__export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+                table: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The table as CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_row_v1_databases__connector_id__tables__table__rows__rowid__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+                table: string;
+                rowid: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RowWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_row_v1_databases__connector_id__tables__table__rows__rowid__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+                table: string;
+                rowid: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    query_v1_databases__connector_id__query_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                connector_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueryRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_QueryResult_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    knowledge_map_v1_knowledge_get: {
+        parameters: {
+            query?: {
+                /** @description Text in the source's title. */
+                q?: string | null;
+                /** @description upload: files; workspace: the workspace's records. */
+                origin?: ("upload" | "workspace") | null;
+                /** @description Only sources with passages never retrieved, most first. */
+                unused?: boolean;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_KnowledgeMap_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    passages_v1_knowledge__document_id__passages_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_PassageList_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_v1_knowledge_search_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeSearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Envelope_KnowledgeSearchResponse_"];
+                };
+            };
+            /** @description Missing or invalid API key */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;

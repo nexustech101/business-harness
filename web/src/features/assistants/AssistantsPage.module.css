@@ -1,0 +1,36 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.pad {
+  padding: var(--s-4);
+}
+
+.name {
+  font-weight: 500;
+}
+
+.role {
+  max-width: 420px;
+  color: var(--text-2);
+}
+
+.create {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.createActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--s-2);
+}
+
+.createActions > span {
+  margin-right: auto;
+  font-size: var(--fs-sm);
+}

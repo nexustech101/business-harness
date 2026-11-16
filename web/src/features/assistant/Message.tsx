@@ -39,11 +39,14 @@ export function AssistantMessage({ turn, last }: { turn: Extract<Turn, { role: "
   );
 }
 
-/** Shown while the request runs. The API answers once, so the wording follows the scope, with the elapsed time. */
-export function Thinking() {
+/**
+ * Shown while the request runs. The API answers once, so the wording follows the scope (or `label`, for other
+ * chats), with the elapsed time.
+ */
+export function Thinking({ label: fixed }: { label?: string }) {
   const { scope } = useAssistant();
   const seconds = useSeconds();
-  const label = scope.documents.length === 1 ? `Reading ${scope.documents[0]!.title}…` : "Searching documents…";
+  const label = fixed ?? (scope.documents.length === 1 ? `Reading ${scope.documents[0]!.title}…` : "Searching documents…");
   return (
     <div className={styles.assistant} role="status">
       <Mark busy className={styles.avatar} />
@@ -55,8 +58,10 @@ export function Thinking() {
   );
 }
 
-export function Failure() {
-  const { error, stopped, retry } = useAssistant();
+/** The failed (or stopped) request with Retry: the document assistant's, or another chat's when `chat` is given. */
+export function Failure({ chat }: { chat?: { error: Error | null; stopped: boolean; retry: () => void } }) {
+  const assistant = useAssistant();
+  const { error, stopped, retry } = chat ?? assistant;
   return (
     <div className={styles.assistant}>
       <span className={styles.avatar} />

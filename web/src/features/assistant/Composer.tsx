@@ -1,15 +1,14 @@
 import { ArrowLeft, ArrowUp, CalendarDays, ChevronDown, ChevronRight, CircleAlert, FileText, FolderOpen, Plus, Search, Upload, Users, X } from "lucide-react";
-import { useDeferredValue, useEffect, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { errorMessage } from "../../api/client";
-import { useDocuments, useStats, useUploadDocument } from "../../api/library";
-import { useAssistant, withDocument, type ScopedDocument } from "../../app/assistant";
+import { useDocuments, useStats } from "../../api/library";
+import { useAssistant, type ScopedDocument } from "../../app/assistant";
 import { Menu, MenuHeading, MenuItem, MenuSeparator } from "../../components/Menu";
 import { Spinner } from "../../components/Spinner";
+import { useComposer } from "./hooks";
 import styles from "./Composer.module.css";
 
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.txt,.md,.csv,.xlsx";
-const LINE = 24;
-const MAX_ROWS = 8;
 
 type Props = {
   /** Where menus open: above a composer docked at the bottom, below one in the middle of the page. */
@@ -23,52 +22,7 @@ type Props = {
  * line), the "+" menu (upload or attach a document), scope pills or document chips, and send / stop.
  */
 export function Composer({ placement, minRows = 1, autoFocus }: Props) {
-  const { ask, pending, stop, scope, setScope } = useAssistant();
-  const [text, setText] = useState("");
-  const area = useRef<HTMLTextAreaElement>(null);
-  const upload = useUploadDocument();
-  const uploading = upload.isPending ? (upload.variables?.file.name ?? "") : null;
-  const canSend = text.trim() !== "" && !pending && uploading === null;
-
-  useLayoutEffect(() => {
-    const el = area.current;
-    if (!el) return;
-    el.style.height = "auto";
-    const max = LINE * MAX_ROWS + el.offsetHeight - el.clientHeight + paddingY(el);
-    el.style.height = `${Math.min(el.scrollHeight + el.offsetHeight - el.clientHeight, max)}px`;
-    el.style.overflowY = el.scrollHeight + el.offsetHeight - el.clientHeight > max ? "auto" : "hidden";
-  }, [text]);
-
-  useEffect(() => {
-    if (autoFocus) area.current?.focus();
-  }, [autoFocus]);
-
-  const submit = (e?: FormEvent) => {
-    e?.preventDefault();
-    if (!canSend) return;
-    ask(text.trim());
-    setText("");
-  };
-
-  const keyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      submit();
-    }
-  };
-
-  const attach = (document: ScopedDocument) => {
-    setScope((s) => withDocument(s, document));
-    area.current?.focus();
-  };
-
-  const uploadFile = (file: File) =>
-    upload.mutate(
-      { file, client: scope.client, tax_year: scope.tax_year },
-      {
-        onSuccess: (doc) => attach({ id: doc.id, title: doc.title }),
-      },
-    );
+  const { text, setText, area, submit, keyDown, attach, uploadFile, upload, uploading, canSend, pending, stop, scope, setScope } = useComposer(autoFocus);
 
   return (
     <form className={styles.composer} onSubmit={submit} onClick={(e) => e.target === e.currentTarget && area.current?.focus()}>
@@ -144,11 +98,6 @@ function placeholder(documents: ScopedDocument[]): string {
   if (documents.length === 1) return `Ask about ${documents[0]!.title}`;
   if (documents.length > 1) return "Ask about these documents";
   return "Ask about clients, forms or open flags";
-}
-
-function paddingY(el: HTMLElement): number {
-  const style = getComputedStyle(el);
-  return parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
 }
 
 type AddMenuProps = {

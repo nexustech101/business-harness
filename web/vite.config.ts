@@ -8,5 +8,6 @@ export default defineConfig({
   plugins: [react()],
   server: { proxy: Object.fromEntries(proxied.map((path) => [path, API])) },
   build: { outDir: "dist", sourcemap: true },
-  test: { include: ["src/**/*.test.ts"], environment: "node" },
+  // Component tests choose jsdom per file (`// @vitest-environment jsdom`); src/test/api.ts fakes the API for them.
+  test: { include: ["src/**/*.test.{ts,tsx}"], environment: "node", setupFiles: ["src/test/api.ts"] },
 });
