@@ -11,6 +11,10 @@ Search (`search_chunks`):
 3. Keyword: FTS5 BM25 over the same filtered chunks; catches exact identifiers
    (EINs, account numbers, codes) that embeddings blur.
 4. The two rankings are merged by reciprocal rank fusion.
+5. Breadth: one document fills at most half of the results while others match (`diversify`), so a long
+   document cannot crowd out a short one; documents that matched by keyword, or nearly as closely as the
+   best hit (`NEAR`), without making the cut are returned as `other_sources`; every returned chunk is counted
+   in `chunk_usage` (what the knowledge map shows as retrieved).
 
 Exact scoring over the filtered set keeps results exact and the code small.
 It reads every filtered vector per query: fine to tens of thousands of chunks
@@ -27,11 +31,13 @@ import httpx
 import numpy as np
 
 from library.config import EmbeddingConfig
-from library.schema import SearchFilters, SearchHit
-from library.store import index_dimensions, where
+from library.schema import SearchFilters, SearchHit, SearchOutcome, SourceRef
+from library.store import Store, index_dimensions, where
 
 RRF_K = 60  # reciprocal rank fusion constant
 BATCH = 4096  # vectors scored per step
+OTHER_SOURCES = 5  # matching documents named beside the hits
+NEAR = 0.8  # a chunk is close to the best one when its similarity is at least this share of the best
 
 
 class EmbeddingsUnavailable(RuntimeError):
@@ -109,25 +115,49 @@ def semantic(cursor: sqlite3.Cursor, vector: np.ndarray, pool: int) -> dict[int,
     return {int(best_ids[i]): float(best_scores[i]) for i in order}
 
 
+def diversify(ranked: list[int], document_of: dict[int, str], limit: int) -> list[int]:
+    """The first `limit` of `ranked` with at most half of them (at least 2) from one document; when the other
+    documents run out, the held-back chunks fill the rest in rank order."""
+    per_document = max(2, (limit + 1) // 2)
+    picked, held, taken = [], [], {}
+    for seq in ranked:
+        document = document_of[seq]
+        if taken.get(document, 0) < per_document:
+            picked.append(seq)
+            taken[document] = taken.get(document, 0) + 1
+        else:
+            held.append(seq)
+    return (picked[:limit] + held)[:limit]
+
+
 def search_chunks(conn: sqlite3.Connection, model_id: str, vector: np.ndarray, query: str, filters: SearchFilters,
-                  owner: str | None, limit: int) -> list[SearchHit]:
+                  owner: str | None, limit: int) -> SearchOutcome:
     sql, params = where(filters, owner)
     pool = max(limit * 5, 50)
     source = f"FROM document_chunks c JOIN documents d ON d.id = c.document_id WHERE {sql}"
     if index_dimensions(conn, model_id) is None:
-        return []  # nothing indexed yet
+        return SearchOutcome(hits=[])  # nothing indexed yet
     similarity = semantic(conn.execute(f"SELECT c.seq, c.embedding {source}", params), vector, pool)
     terms = fts_query(query)
     keyword = [r[0] for r in conn.execute(
         f"SELECT c.seq FROM chunk_text JOIN document_chunks c ON c.seq = chunk_text.rowid"
         f" JOIN documents d ON d.id = c.document_id WHERE chunk_text MATCH ? AND {sql}"
         f" ORDER BY bm25(chunk_text) LIMIT ?", [terms, *params, pool])] if terms else []
-    ranked = fuse(list(similarity), keyword)[:limit]
-    if not ranked:
-        return []
+    fused = fuse(list(similarity), keyword)
+    if not fused:
+        return SearchOutcome(hits=[])
     rows = {r["seq"]: r for r in conn.execute(
         "SELECT c.seq, c.id AS chunk_id, c.document_id, d.title, d.client, c.document_type, c.tax_year,"
         " c.section_title, c.page_number, c.sheet_name, c.content FROM document_chunks c"
-        f" JOIN documents d ON d.id = c.document_id WHERE c.seq IN ({','.join('?' * len(ranked))})", ranked)}
-    return [SearchHit(**{k: rows[i][k] for k in rows[i].keys() if k != "seq"},
+        f" JOIN documents d ON d.id = c.document_id WHERE c.seq IN ({','.join('?' * len(fused))})", fused)}
+    ranked = diversify(fused, {seq: rows[seq]["document_id"] for seq in fused}, limit)
+    hits = [SearchHit(**{k: rows[i][k] for k in rows[i].keys() if k != "seq"},  # noqa: SIM118 (sqlite3.Row)
                       similarity=round(similarity[i], 4) if i in similarity else None) for i in ranked]
+    Store.record_hits(conn, [hit.chunk_id for hit in hits])
+    shown = {hit.document_id for hit in hits}
+    floor = NEAR * max(similarity.values(), default=0.0)
+    relevant = set(keyword) | {seq for seq, score in similarity.items() if score > 0 and score >= floor}
+    others = {rows[seq]["document_id"]: rows[seq]["title"] for seq in fused
+              if seq in relevant and rows[seq]["document_id"] not in shown}  # in rank order, one per document
+    return SearchOutcome(hits=hits, other_sources=[SourceRef(document_id=document_id, title=title)
+                                                   for document_id, title in list(others.items())[:OTHER_SOURCES]])

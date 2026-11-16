@@ -2,7 +2,8 @@
 
 The fake embedder hashes words into a vector, so texts sharing words are similar; the fake chat
 model replays scripted replies. Requests the code sends are recorded so tests can check each
-provider's wire format.
+provider's wire format. `FakeHub` stands in for `business.connectors.ConnectorHub` (same methods,
+in-memory connectors per owner, recorded calls); `workspace` builds a `Business` on it.
 """
 
 from __future__ import annotations
@@ -18,7 +19,12 @@ import httpx
 import numpy as np
 import pypdfium2 as pdfium
 
+import agent
 from agent.config import AssistantConfig, load_config
+from business.config import BusinessConfig, load_business_config
+from business.connectors import ToolResult
+from business.schema import ConnectorCreate, ConnectorInfo, ConnectorListing, ConnectorTool, OAuthStart
+from business.service import Business
 from core.config import PROJECT_ROOT
 from core.flags import Flag
 from core.forms import W2
@@ -174,3 +180,92 @@ def stored_w2(library: Library, owner="1", client="Gonzalez"):
     d = asyncio.run(read_file(fake_pipeline(), W2_PDF, "w2.pdf", chunk_chars=1500, client=client))
     document, _ = asyncio.run(library.add(d, owner, W2_PDF))
     return document
+
+
+# --- Business workspace ----------------------------------------------------------------------------------
+
+
+def listing(listing_id: str, name: str, category: str = "Productivity", capabilities=(), auth="none"):
+    return ConnectorListing(id=listing_id, name=name, publisher=name, category=category, description=f"{name} tools",
+                            capabilities=list(capabilities), availability="Official", docs_url="https://example.com",
+                            transport="streamable_http", url=f"https://{listing_id}.example.com/mcp", auth=auth)
+
+
+def connector(connector_id: str, name: str, status="connected", listing_id=None, error=None) -> ConnectorInfo:
+    return ConnectorInfo(id=connector_id, listing_id=listing_id, name=name, transport="streamable_http",
+                         url="https://x.example.com/mcp", command=None, args=[], auth="none", has_secret=False,
+                         status=status, error=error, tool_count=0, created_at="2026-01-01T00:00:00Z", checked_at=None)
+
+
+def connector_tool(connector_id: str, name: str, read_only: bool) -> ConnectorTool:
+    return ConnectorTool(connector_id=connector_id, name=name, description=f"{name} tool", read_only=read_only,
+                         input_schema={"type": "object", "properties": {"id": {"type": "string"}}})
+
+
+class FakeHub:
+    """`ConnectorHub` in memory. `installed`: owner -> connectors; `tools_`: the tools of every connector;
+    `results`: tool name -> ToolResult. `calls` records every `call` as (owner, connector id, tool, arguments)."""
+
+    def __init__(self, catalog=(), installed=None, tools=(), results=None):
+        self.listings = list(catalog)
+        self.installed: dict[str, dict[str, ConnectorInfo]] = {
+            owner: {c.id: c for c in connectors} for owner, connectors in (installed or {}).items()}
+        self.tools_ = list(tools)
+        self.results = results or {}
+        self.calls: list[tuple] = []
+
+    def catalog(self) -> list[ConnectorListing]:
+        return self.listings
+
+    def list(self, owner: str) -> list[ConnectorInfo]:
+        return list(self.installed.get(owner, {}).values())
+
+    def get(self, owner: str, connector_id: str) -> ConnectorInfo | None:
+        return self.installed.get(owner, {}).get(connector_id)
+
+    async def add(self, owner: str, request: ConnectorCreate, admin: bool) -> ConnectorInfo:
+        info = connector(f"c{sum(map(len, self.installed.values())) + 1}", request.name, listing_id=request.listing_id)
+        self.installed.setdefault(owner, {})[info.id] = info
+        return info
+
+    def remove(self, owner: str, connector_id: str) -> bool:
+        return self.installed.get(owner, {}).pop(connector_id, None) is not None
+
+    async def check(self, owner: str, connector_id: str) -> ConnectorInfo | None:
+        return self.get(owner, connector_id)
+
+    async def tools(self, owner: str, connector_ids: list[str]) -> list[ConnectorTool]:
+        live = {c.id for c in self.list(owner) if c.status == "connected"}
+        return [t for t in self.tools_ if t.connector_id in connector_ids and t.connector_id in live]
+
+    async def call(self, owner: str, connector_id: str, tool: str, arguments: dict) -> ToolResult:
+        self.calls.append((owner, connector_id, tool, arguments))
+        return self.results.get(tool, ToolResult(f"{tool} done"))
+
+    def database(self, owner: str, connector_id: str) -> None:
+        return None  # the fake has no built-in apps
+
+    async def start_oauth(self, owner: str, connector_id: str) -> OAuthStart | None:
+        return OAuthStart(authorize_url="https://auth.example.com") if self.get(owner, connector_id) else None
+
+    async def finish_oauth(self, state: str, code: str) -> ConnectorInfo:
+        raise NotImplementedError
+
+
+def business_config(tmp_path: Path) -> BusinessConfig:
+    return load_business_config(PROJECT_ROOT / "config" / "model_config.yml").model_copy(
+        update={"database": tmp_path / "business.db"})
+
+
+def workspace(tmp_path: Path, replies=(), hub: FakeHub | None = None) -> tuple[Business, Chat]:
+    """A Business on a tmp database and library, a scripted chat model (`replies`) and a fake hub."""
+    chat = Chat(list(replies))
+    library, assistant = agent.build(config(tmp_path), chat, Embeddings())
+    return Business(business_config(tmp_path), library, assistant.chat, hub or FakeHub()), chat
+
+
+def openai_turn(text: str | None, *calls: tuple[str, dict]) -> dict:
+    """One assistant turn with optional text and several tool calls `(name, arguments)`."""
+    return {"choices": [{"message": {"content": text, "tool_calls": [
+        {"id": f"t{i}", "type": "function", "function": {"name": name, "arguments": json.dumps(args)}}
+        for i, (name, args) in enumerate(calls)]}}], "usage": {"prompt_tokens": 10, "completion_tokens": 1}}

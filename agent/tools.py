@@ -8,6 +8,8 @@ dispatches from.
 | Tool                | Does                                                                     |
 |---------------------|--------------------------------------------------------------------------|
 | `search_documents`  | hybrid search; every excerpt gets a source number the answer cites as [n] |
+| `browse_knowledge`  | the map of the index: every source, its sections, what was never retrieved |
+| `read_document`     | a source in full, passage by passage, numbered like search excerpts       |
 | `list_documents`    | documents matching filters, with review status and open flags            |
 | `get_document`      | one document: metadata, forms, review status, open flags, reviewed values |
 | `classify_document` | runs the configured classifier (tev1 or headings) on the stored file     |
@@ -26,9 +28,10 @@ system prompt (`config/model_config.yml`).
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from contextlib import nullcontext
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 from fastapi.concurrency import run_in_threadpool
 from pydantic import ValidationError
@@ -40,13 +43,13 @@ from core.jobs import Busy, JobGate
 from core.parser import ConversionFailed, DocumentTooLarge, UnsupportedDocument
 from core.tev import ClassifierUnavailable
 from library.files import pdf_pages
-from core.utils import mask_ssns
 from library.ingest import form_lines
-from library.schema import DocumentDetail, DocumentFilters, SearchFilters, SearchHit
+from library.schema import WORKSPACE_PREFIX, DocumentDetail, DocumentFilters, SearchFilters, SearchHit
 from library.service import Library
 
 FILTERS = ("client", "tax_year", "document_type")
 MAX_CHARS = 12_000  # per tool result
+BROWSE_LIMIT, READ_LIMIT = 30, 8  # sources per browse_knowledge page, passages per read_document call
 # What a tool on a stored file can hit; reported to the model, not raised.
 PROCESSING_ERRORS = (Busy, UnsupportedDocument, DocumentTooLarge, ConversionFailed, ExtractorUnavailable,
                      ClassifierUnavailable)
@@ -129,8 +132,9 @@ async def stored_file(document: DocumentDetail, ctx: ToolContext, verb: str) -> 
     return original
 
 
-def _cap(text: str) -> str:
-    return text if len(text) <= MAX_CHARS else text[:MAX_CHARS] + "\n[truncated]"
+def cap(text: str, limit: int = MAX_CHARS) -> str:
+    """`text` cut to `limit` characters, then `\n[truncated]` appended when it was cut."""
+    return text if len(text) <= limit else text[:limit] + "\n[truncated]"
 
 
 def _label(hit: SearchHit) -> str:
@@ -150,8 +154,9 @@ DOCUMENT_ID = {"document_id": {"type": "string", "description": "Document id, fr
 
 
 @tool("search_documents",
-      "Search the firm's stored tax and business documents by meaning and by keywords. Returns numbered excerpts "
-      "with their document id, client, form, tax year and page. Filters narrow the search.",
+      "Search everything stored (business documents, tax forms, and the workspace's own records) by meaning and "
+      "by keywords. Returns numbered excerpts with their document id, client, form, tax year and page, and names "
+      "other sources that are relevant but not shown. Filters narrow the search.",
       {"type": "object", "properties": {
           "query": {"type": "string", "description": "What to look for, in words or exact terms "
                                                      "(e.g. 'mortgage interest paid', 'account 5521-0098')."},
@@ -169,14 +174,90 @@ async def search_documents(args: dict, ctx: ToolContext) -> str:
     if isinstance(filters, str):
         return filters
     limit = args.get("limit") if isinstance(args.get("limit"), int) else None
-    hits = await ctx.library.search(query, filters, ctx.owner, limit)
-    if not hits:
-        return "No matching documents."
-    out = []
-    for hit in hits:
-        source = ctx.sources.setdefault(hit.chunk_id, Source(n=len(ctx.sources) + 1, **hit.model_dump()))
-        out.append(f"[{source.n}] {_label(hit)} [document {hit.document_id}]\n{hit.content}")
+    found = await ctx.library.search_wide(query, filters, ctx.owner, limit)
+    if not found.hits:
+        return "No matching documents. browse_knowledge lists everything that is stored."
+    out = [_cite(hit, ctx) for hit in found.hits]
+    if found.other_sources:
+        out.append("Also relevant, not shown (open with read_document): "
+                   + "; ".join(f"{s.title} [document {s.document_id}]" for s in found.other_sources))
     return "\n\n".join(out)
+
+
+def _cite(hit: SearchHit, ctx: ToolContext) -> str:
+    """The excerpt as the model reads it, under the source number its answer cites."""
+    source = ctx.sources.setdefault(hit.chunk_id, Source(n=len(ctx.sources) + 1, **hit.model_dump()))
+    return f"[{source.n}] {_label(hit)} [document {hit.document_id}]\n{hit.content}"
+
+
+def _count(args: dict, key: str, default: int, most: int) -> int:
+    value = args.get(key)
+    return min(value, most) if isinstance(value, int) and not isinstance(value, bool) and value > 0 else default
+
+
+def _offset(args: dict) -> int:
+    value = args.get("offset")
+    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else 0
+
+
+@tool("browse_knowledge",
+      "The map of everything stored, whether or not a search finds it: every source (uploaded documents, and the "
+      "workspace's own records: business profile, discovery answers, notes) with its sections, its number of "
+      "passages and how many were never retrieved. Use it to see what exists before concluding something is "
+      "unknown; `unused_only` lists the material nobody has looked at yet. Open a source with read_document.",
+      {"type": "object", "properties": {
+          "q": {"type": "string", "description": "Only sources whose title contains this text."},
+          "unused_only": {"type": "boolean", "description": "Only sources with passages never retrieved."},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+          "offset": {"type": "integer", "minimum": 0, "description": "Skip this many sources (next page)."},
+      }})
+async def browse_knowledge(args: dict, ctx: ToolContext) -> str:
+    filters = narrow({"q": args.get("q") or None}, ctx.scope, ("q",))
+    if isinstance(filters, str):
+        return filters
+    limit, offset = _count(args, "limit", BROWSE_LIMIT, 100), _offset(args)
+    found = await run_in_threadpool(ctx.library.sources, filters, ctx.owner, limit, offset,
+                                    args.get("unused_only") is True)
+    head = (f"{found.sources} source(s), {found.passages} passage(s), {found.never_retrieved} never retrieved. "
+            f"{found.count} match")
+    if not found.items:
+        return head + "; none on this page."
+    lines = [head + f"; showing {offset + 1}-{offset + len(found.items)}:"]
+    for s in found.items:
+        kind = "workspace record" if s.location.startswith(WORKSPACE_PREFIX) else f"{s.type} file"
+        sections = f" | sections: {'; '.join(s.sections)}" if s.sections else ""
+        lines.append(f"- {s.document_id} | {s.title} | {kind} | {s.passages} passage(s), "
+                     f"{s.never_retrieved} never retrieved{sections}")
+    return cap("\n".join(lines))
+
+
+@tool("read_document",
+      "Read a source in full, passage by passage in document order (a search returns only its best excerpts). "
+      "Passages are numbered like search excerpts, so cite them the same way. `offset` continues after the "
+      "passages already read.",
+      {"type": "object", "properties": {
+          **DOCUMENT_ID,
+          "offset": {"type": "integer", "minimum": 0, "description": "Passages to skip (0: from the start)."},
+          "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+      }, "required": ["document_id"]})
+async def read_document(args: dict, ctx: ToolContext) -> str:
+    document = await scoped_document(args, ctx)
+    if isinstance(document, str):
+        return document
+    limit, offset = _count(args, "limit", READ_LIMIT, 20), _offset(args)
+    read = await run_in_threadpool(ctx.library.passages, document.id, ctx.owner, limit, offset, True)
+    if read is None or not read.passages:
+        return f"{document.title} has {read.count if read else 0} passage(s); none at offset {offset}."
+    out = [f"{document.title}: passages {offset + 1}-{offset + len(read.passages)} of {read.count}."]
+    for p in read.passages:
+        hit = SearchHit(chunk_id=p.chunk_id, document_id=document.id, title=document.title, client=document.client,
+                        document_type=p.document_type, tax_year=document.tax_year, section_title=p.section_title,
+                        page_number=p.page_number, sheet_name=p.sheet_name, content=p.content, similarity=None)
+        out.append(_cite(hit, ctx))
+    rest = read.count - offset - len(read.passages)
+    if rest > 0:
+        out.append(f"{rest} more passage(s): call read_document with offset {offset + len(read.passages)}.")
+    return cap("\n\n".join(out))
 
 
 @tool("list_documents",
@@ -202,7 +283,7 @@ async def list_documents(args: dict, ctx: ToolContext) -> str:
                      f"{', '.join(d.document_types) or '-'} | review {d.review_status or 'n/a'}: "
                      f"{d.forms_pending} pending, {d.forms_approved} approved, {d.open_flags} open flags | "
                      f"added {d.created_at:%Y-%m-%d}")
-    return _cap("\n".join(lines))
+    return cap("\n".join(lines))
 
 
 @tool("get_document",
@@ -216,18 +297,16 @@ async def get_document(args: dict, ctx: ToolContext) -> str:
     d = document
     lines = [f"Document {d.id}: {d.title} ({d.type}, {d.page_count} page(s), client {d.client or '-'}, "
              f"tax year {d.tax_year or '-'}, added {d.created_at:%Y-%m-%d}, review {d.review_status or 'n/a'})"]
-    for summary in d.forms:
-        form = await run_in_threadpool(ctx.library.form, summary.id, ctx.owner)
+    for form in await run_in_threadpool(ctx.library.forms, d.id, ctx.owner):
         lines.append(f"\nForm {form.index} [{form.id}]: {form.form_name or 'not a supported form'} | pages "
                      f"{', '.join(map(str, form.pages))} | {form.status} | review {form.review_status or 'n/a'} | "
                      f"{form.open_flags} open flag(s), {form.checked}/{form.total} fields checked")
         for check in form.checks:
             if check.flags and check.review is None:
-                lines.append(mask_ssns(f"  open flag {check.field}: "
-                                       + "; ".join(f"{f.code}: {f.message}" for f in check.flags)))
+                lines.append(f"  open flag {check.field}: " + "; ".join(f"{f.code}: {f.message}" for f in check.flags))
         if form.status == "ok" and form.corrected_fields:
             lines += [f"  {line}" for line in form_lines(form.corrected_fields)]
-    return _cap("\n".join(lines))
+    return cap("\n".join(lines))
 
 
 @tool("classify_document",
@@ -280,7 +359,7 @@ async def extract_document(args: dict, ctx: ToolContext) -> str:
     original = await stored_file(document, ctx, "extracted")
     if isinstance(original, str):
         return original
-    data, media_type, name = original
+    data, _, name = original
     try:
         async with ctx.jobs.slot() if ctx.jobs else nullcontext():
             if form_id:
@@ -297,5 +376,5 @@ async def extract_document(args: dict, ctx: ToolContext) -> str:
         if fields is not None:
             lines += [f"  {line}" for line in form_lines(fields.model_dump(mode="json"))]
         for flag in validation.flags if validation else []:
-            lines.append(mask_ssns(f"  flag {flag.field or 'form'}: {flag.code}: {flag.message}"))
-    return _cap("\n".join(lines))
+            lines.append(f"  flag {flag.field or 'form'}: {flag.code}: {flag.message}")  # Flag masks its message
+    return cap("\n".join(lines))

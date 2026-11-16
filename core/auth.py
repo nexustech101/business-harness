@@ -10,7 +10,6 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import datetime, timedelta
-from typing import Optional
 
 from core.db import utcnow
 from core.models import ApiKey
@@ -33,7 +32,7 @@ def find_active_key(raw: str) -> ApiKey | None:
 def create_api_key(
     name: str,
     is_admin: bool = False,
-    expires_at: Optional[datetime] = None,
+    expires_at: datetime | None = None,
 ) -> tuple[str, ApiKey]:
     """*Usage:*
     >>> raw, record = create_api_key("local")
@@ -54,7 +53,7 @@ def create_api_key(
 def create_api_key_from_days(
     name: str,
     is_admin: bool = False,
-    expires_in_days: Optional[int] = None,
+    expires_in_days: int | None = None,
 ) -> tuple[str, ApiKey]:
     """*Usage:*
     >>> raw, record = create_api_key_from_days("local", expires_in_days=30)

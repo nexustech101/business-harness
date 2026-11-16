@@ -7,12 +7,11 @@ The `registers` registry that owns every table in this service.
 >>> db.create_all()
 """
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from registers.db import DatabaseRegistry
 
 from core.config import settings
-
 
 DATABASE_URL = settings.database_url
 
@@ -26,7 +25,7 @@ def utcnow() -> datetime:
     >>> isinstance(utcnow(), datetime)
     True
     """
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def init_db() -> None:

@@ -21,7 +21,9 @@ from __future__ import annotations
 
 import re
 import typing
-from typing import Any, Iterator
+from collections.abc import Iterator
+from itertools import pairwise
+from typing import Any, NamedTuple
 
 from pydantic import BaseModel, ValidationError
 
@@ -113,23 +115,28 @@ def _fields(form: FormResult) -> dict | None:
     return form.fields.model_dump(mode="json") if form.fields is not None else None
 
 
-def checks(form: FormResult, reviews: dict[str, Review]) -> tuple[list[Check], list[Flag]]:
-    """(checks, form-level flags). Form-level: flags without a field, or naming a field that has no check."""
+class FormChecks(NamedTuple):
+    checks: list[Check]
+    form_flags: list[Flag]  # flags without a field, or naming a field that has no check
+
+
+def checks(form: FormResult, reviews: dict[str, Review]) -> FormChecks:
+    """A form's checks in field order, and its form-level flags."""
     if form.fields is None:
-        return [], list(form.validation.flags) if form.validation else []
+        return FormChecks([], list(form.validation.flags) if form.validation else [])
     leaves = list(_leaves(type(form.fields), _fields(form), sources=form.validation.sources if form.validation else {}))
     by_field: dict[str | None, list[Flag]] = {}
     for flag in form.validation.flags if form.validation else []:
         by_field.setdefault(flag.field, []).append(flag)
     paths = {leaf["field"] for leaf in leaves}
     form_flags = [f for key, flags in by_field.items() if key not in paths for f in flags]
-    return [Check(**leaf, flags=by_field.get(leaf["field"], []), review=reviews.get(leaf["field"]))
-            for leaf in leaves], form_flags
+    return FormChecks([Check(**leaf, flags=by_field.get(leaf["field"], []), review=reviews.get(leaf["field"]))
+                       for leaf in leaves], form_flags)
 
 
 def flagged_fields(form: FormResult) -> list[str]:
     """Paths of checks with at least one flag: what approval needs decided."""
-    return [c.field for c in checks(form, {})[0] if c.flags]
+    return [c.field for c in checks(form, {}).checks if c.flags]
 
 
 def undecided(form_checks: list[Check]) -> list[str]:
@@ -147,7 +154,7 @@ def _set(data: dict, path: str, value: Scalar) -> None:
     """Set a leaf, creating missing objects on the way (a box inside a party the extractor found empty)."""
     tokens = _tokens(path)
     target: Any = data
-    for token, following in zip(tokens, tokens[1:]):
+    for token, following in pairwise(tokens):
         if isinstance(token, int):
             target = target[token]
         else:

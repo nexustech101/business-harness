@@ -19,7 +19,7 @@ import re
 import typing
 from datetime import date
 from decimal import Decimal
-from typing import Annotated, Any, ClassVar, Literal, Optional, Union
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer
 
@@ -41,16 +41,16 @@ from core.utils import (
 
 _as_float = PlainSerializer(lambda v: float(v) if v is not None else None, when_used="json")
 
-Money = Annotated[Optional[Decimal], BeforeValidator(parse_money), _as_float]
-Percent = Annotated[Optional[Decimal], BeforeValidator(parse_percent), _as_float]
-Tin = Annotated[Optional[str], BeforeValidator(parse_tin)]
-Date = Annotated[Optional[date], BeforeValidator(parse_date)]
-Check = Annotated[Optional[bool], BeforeValidator(parse_bool)]
-Text = Annotated[Optional[str], BeforeValidator(clean_text)]
-State = Annotated[Optional[str], BeforeValidator(parse_state)]
-Year = Annotated[Optional[int], BeforeValidator(parse_year)]
-Month = Annotated[Optional[str], BeforeValidator(parse_month)]
-Acquired = Annotated[Optional[Union[date, Literal["VARIOUS"]]], BeforeValidator(parse_acquired)]
+Money = Annotated[Decimal | None, BeforeValidator(parse_money), _as_float]
+Percent = Annotated[Decimal | None, BeforeValidator(parse_percent), _as_float]
+Tin = Annotated[str | None, BeforeValidator(parse_tin)]
+Date = Annotated[date | None, BeforeValidator(parse_date)]
+Check = Annotated[bool | None, BeforeValidator(parse_bool)]
+Text = Annotated[str | None, BeforeValidator(clean_text)]
+State = Annotated[str | None, BeforeValidator(parse_state)]
+Year = Annotated[int | None, BeforeValidator(parse_year)]
+Month = Annotated[str | None, BeforeValidator(parse_month)]
+Acquired = Annotated[date | Literal["VARIOUS"] | None, BeforeValidator(parse_acquired)]
 
 
 def box(num: str | None, label: str, **extra: Any) -> Any:
@@ -105,7 +105,7 @@ class Address(_Model):
 class Party(_Model):
     name: Text = None
     tin: Tin = Field(default=None, description="SSN, ITIN or EIN")
-    address: Optional[Address] = None
+    address: Address | None = None
     phone: Text = None
 
 
@@ -171,8 +171,8 @@ class W2(TaxForm):
     TITLE = "Form W-2 Wage and Tax Statement"
     HINT = "Employer-issued wage statement with boxes for wages, tips, social security and Medicare wages and withholding."
 
-    employee: Optional[Party] = party("e/f Employee's name, address, and ZIP code", "a Employee's social security number", "a")
-    employer: Optional[Party] = party("c Employer's name, address, and ZIP code", "b Employer identification number (EIN)", "b")
+    employee: Party | None = party("e/f Employee's name, address, and ZIP code", "a Employee's social security number", "a")
+    employer: Party | None = party("c Employer's name, address, and ZIP code", "b Employer identification number (EIN)", "b")
     control_number: Text = box("d", "Control number")
     wages_tips_other_comp: Money = box("1", "Wages, tips, other compensation")
     federal_income_tax_withheld: Money = box("2", "Federal income tax withheld")
@@ -215,8 +215,8 @@ class Form1099NEC(InformationReturn):
     TITLE = "Form 1099-NEC Nonemployee Compensation"
     HINT = "Reports nonemployee compensation paid to independent contractors; box 1 nonemployee compensation."
 
-    payer: Optional[Party] = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
-    recipient: Optional[Party] = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
+    payer: Party | None = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
+    recipient: Party | None = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
     second_tin_notice: Check = box(None, "2nd TIN not.")
     nonemployee_compensation: Money = box("1", "Nonemployee compensation")
     direct_sales_5000_or_more: Check = box("2", "Payer made direct sales totaling $5,000 or more of consumer products to recipient for resale")
@@ -231,8 +231,8 @@ class Form1099MISC(InformationReturn):
     TITLE = "Form 1099-MISC Miscellaneous Information"
     HINT = "Reports rents, royalties, other income, prizes, medical and health care payments, attorney proceeds."
 
-    payer: Optional[Party] = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
-    recipient: Optional[Party] = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
+    payer: Party | None = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
+    recipient: Party | None = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
     rents: Money = box("1", "Rents")
     royalties: Money = box("2", "Royalties")
     other_income: Money = box("3", "Other income")
@@ -257,8 +257,8 @@ class Form1099INT(InformationReturn):
     TITLE = "Form 1099-INT Interest Income"
     HINT = "Bank or brokerage statement of interest income, early withdrawal penalty, tax-exempt interest, bond premium."
 
-    payer: Optional[Party] = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
-    recipient: Optional[Party] = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
+    payer: Party | None = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
+    recipient: Party | None = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
     payer_rtn: Text = box(None, "Payer's RTN (optional)")
     interest_income: Money = box("1", "Interest income")
     early_withdrawal_penalty: Money = box("2", "Early withdrawal penalty")
@@ -284,8 +284,8 @@ class Form1099DIV(InformationReturn):
     TITLE = "Form 1099-DIV Dividends and Distributions"
     HINT = "Reports ordinary and qualified dividends, capital gain distributions, section 199A dividends."
 
-    payer: Optional[Party] = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
-    recipient: Optional[Party] = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
+    payer: Party | None = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
+    recipient: Party | None = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
     total_ordinary_dividends: Money = box("1a", "Total ordinary dividends")
     qualified_dividends: Money = box("1b", "Qualified dividends")
     total_capital_gain_distributions: Money = box("2a", "Total capital gain distr.")
@@ -308,10 +308,10 @@ class Form1099DIV(InformationReturn):
     state_info: list[StateTaxRow] = rows("Boxes 14-16: State, State identification no., State tax withheld", 2)
 
     def consistency_checks(self) -> list[Flag]:
-        if self.qualified_dividends and self.total_ordinary_dividends is not None:
-            if self.qualified_dividends > self.total_ordinary_dividends:
-                return [inconsistent("qualified_dividends",
-                                     "box 1b qualified dividends exceed box 1a total ordinary dividends")]
+        if self.qualified_dividends and self.total_ordinary_dividends is not None \
+                and self.qualified_dividends > self.total_ordinary_dividends:
+            return [inconsistent("qualified_dividends",
+                                 "box 1b qualified dividends exceed box 1a total ordinary dividends")]
         return []
 
 
@@ -321,8 +321,8 @@ class Form1099R(InformationReturn):
     TITLE = "Form 1099-R Distributions From Pensions, Annuities, Retirement or Profit-Sharing Plans, IRAs, Insurance Contracts, etc."
     HINT = "Reports retirement plan, pension, annuity and IRA distributions with distribution codes."
 
-    payer: Optional[Party] = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
-    recipient: Optional[Party] = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
+    payer: Party | None = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
+    recipient: Party | None = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
     gross_distribution: Money = box("1", "Gross distribution")
     taxable_amount: Money = box("2a", "Taxable amount")
     taxable_amount_not_determined: Check = box("2b", "Taxable amount not determined")
@@ -355,8 +355,8 @@ class Form1099G(InformationReturn):
     TITLE = "Form 1099-G Certain Government Payments"
     HINT = "Government-issued: unemployment compensation, state or local income tax refunds, credits or offsets."
 
-    payer: Optional[Party] = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
-    recipient: Optional[Party] = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
+    payer: Party | None = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
+    recipient: Party | None = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
     unemployment_compensation: Money = box("1", "Unemployment compensation")
     state_or_local_income_tax_refunds: Money = box("2", "State or local income tax refunds, credits, or offsets")
     box2_tax_year: Year = box("3", "Box 2 amount is for tax year")
@@ -375,7 +375,7 @@ class SSA1099(TaxForm):
     TITLE = "Form SSA-1099 Social Security Benefit Statement"
     HINT = "Social Security Administration benefit statement: benefits paid, benefits repaid, net benefits."
 
-    beneficiary: Optional[Party] = party("Box 1: Name; Box 7: Address", "Box 2: Beneficiary's social security number", "2")
+    beneficiary: Party | None = party("Box 1: Name; Box 7: Address", "Box 2: Beneficiary's social security number", "2")
     benefits_paid: Money = box("3", "Benefits paid in the tax year")
     benefits_repaid: Money = box("4", "Benefits repaid to SSA in the tax year")
     net_benefits: Money = box("5", "Net benefits for the tax year (box 3 minus box 4)")
@@ -384,9 +384,9 @@ class SSA1099(TaxForm):
     medicare_part_b_premiums: Money = box(None, "Medicare Part B premiums deducted from your benefits")
 
     def consistency_checks(self) -> list[Flag]:
-        if None not in (self.benefits_paid, self.benefits_repaid, self.net_benefits):
-            if self.benefits_paid - self.benefits_repaid != self.net_benefits:
-                return [inconsistent("net_benefits", "box 5 net benefits does not equal box 3 minus box 4")]
+        if None not in (self.benefits_paid, self.benefits_repaid, self.net_benefits) \
+                and self.benefits_paid - self.benefits_repaid != self.net_benefits:
+            return [inconsistent("net_benefits", "box 5 net benefits does not equal box 3 minus box 4")]
         return []
 
 
@@ -399,8 +399,8 @@ class Form1098(InformationReturn):
     TITLE = "Form 1098 Mortgage Interest Statement"
     HINT = "Lender statement of mortgage interest received, outstanding principal, points and mortgage insurance premiums."
 
-    lender: Optional[Party] = party("RECIPIENT'S/LENDER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "RECIPIENT'S/LENDER'S TIN")
-    borrower: Optional[Party] = party("PAYER'S/BORROWER'S name, street address (including apt. no.), city or town, state or province, country, and ZIP or foreign postal code", "PAYER'S/BORROWER'S TIN")
+    lender: Party | None = party("RECIPIENT'S/LENDER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "RECIPIENT'S/LENDER'S TIN")
+    borrower: Party | None = party("PAYER'S/BORROWER'S name, street address (including apt. no.), city or town, state or province, country, and ZIP or foreign postal code", "PAYER'S/BORROWER'S TIN")
     mortgage_interest_received: Money = box("1", "Mortgage interest received from payer(s)/borrower(s)")
     outstanding_mortgage_principal: Money = box("2", "Outstanding mortgage principal")
     mortgage_origination_date: Date = box("3", "Mortgage origination date")
@@ -420,8 +420,8 @@ class Form1098T(InformationReturn):
     TITLE = "Form 1098-T Tuition Statement"
     HINT = "College or university tuition statement: qualified tuition payments, scholarships or grants, half-time and graduate student checkboxes."
 
-    filer: Optional[Party] = party("FILER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone number", "FILER'S employer identification no.")
-    student: Optional[Party] = party("STUDENT'S name, street address (including apt. no.), city or town, state or province, country, and ZIP or foreign postal code", "STUDENT'S TIN")
+    filer: Party | None = party("FILER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone number", "FILER'S employer identification no.")
+    student: Party | None = party("STUDENT'S name, street address (including apt. no.), city or town, state or province, country, and ZIP or foreign postal code", "STUDENT'S TIN")
     payments_received_for_qualified_tuition: Money = box("1", "Payments received for qualified tuition and related expenses")
     adjustments_made_for_prior_year: Money = box("4", "Adjustments made for a prior year")
     scholarships_or_grants: Money = box("5", "Scholarships or grants")
@@ -438,8 +438,8 @@ class Form1098E(InformationReturn):
     TITLE = "Form 1098-E Student Loan Interest Statement"
     HINT = "Student loan servicer statement of student loan interest received."
 
-    lender: Optional[Party] = party("RECIPIENT'S/LENDER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone number", "RECIPIENT'S TIN")
-    borrower: Optional[Party] = party("BORROWER'S name, street address (including apt. no.), city or town, state or province, country, and ZIP or foreign postal code", "BORROWER'S TIN")
+    lender: Party | None = party("RECIPIENT'S/LENDER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone number", "RECIPIENT'S TIN")
+    borrower: Party | None = party("BORROWER'S name, street address (including apt. no.), city or town, state or province, country, and ZIP or foreign postal code", "BORROWER'S TIN")
     student_loan_interest_received: Money = box("1", "Student loan interest received by lender")
     excludes_origination_fees_or_capitalized_interest: Check = box("2", "If checked, box 1 does not include loan origination fees and/or capitalized interest for loans made before September 1, 2004")
 
@@ -458,10 +458,10 @@ class BrokerTransaction(_Model):
     wash_sale_loss_disallowed: Money = column("Wash sale loss disallowed", "Wash sale")
     gain_or_loss: Money = column("Gain or loss", "Realized gain or loss", "Gain/loss")
     federal_income_tax_withheld: Money = column("Federal income tax withheld", "Federal tax withheld")
-    term: Optional[Literal["short", "long", "ordinary"]] = Field(
+    term: Literal["short", "long", "ordinary"] | None = Field(
         default=None, description="Box 2: Short-term gain or loss / Long-term gain or loss / Ordinary")
     basis_reported_to_irs: Check = Field(default=None, description="Box 12: If checked, basis reported to IRS (covered)")
-    form_8949_box: Optional[Literal["A", "B", "C", "D", "E", "F"]] = Field(
+    form_8949_box: Literal["A", "B", "C", "D", "E", "F"] | None = Field(
         default=None, description="Applicable checkbox on Form 8949 (A-F)")
 
     @staticmethod
@@ -496,8 +496,8 @@ class Form1099B(InformationReturn):
     HINT = "Broker statement of securities sales: description, dates acquired and sold, proceeds, cost basis, wash sales, short-term or long-term."
     MULTI_PAGE = True  # transaction detail runs over many pages
 
-    payer: Optional[Party] = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
-    recipient: Optional[Party] = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
+    payer: Party | None = party("PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "PAYER'S TIN")
+    recipient: Party | None = party("RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code", "RECIPIENT'S TIN")
     federal_income_tax_withheld: Money = box("4", "Federal income tax withheld")
     profit_or_loss_on_closed_contracts: Money = box("8", "Profit or (loss) realized on closed contracts")
     aggregate_profit_or_loss_on_contracts: Money = box("11", "Aggregate profit or (loss) on contracts")
@@ -523,8 +523,8 @@ class Form1099K(InformationReturn):
     TITLE = "Form 1099-K Payment Card and Third Party Network Transactions"
     HINT = "Payment processor or marketplace statement of gross payment card and third party network transactions, with monthly amounts."
 
-    filer: Optional[Party] = party("FILER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "FILER'S TIN")
-    payee: Optional[Party] = party("PAYEE'S name", "PAYEE'S TIN")
+    filer: Party | None = party("FILER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.", "FILER'S TIN")
+    payee: Party | None = party("PAYEE'S name", "PAYEE'S TIN")
     filer_is_pse: Check = box(None, "Payment settlement entity (PSE)")
     filer_is_epf_or_other_third_party: Check = box(None, "Electronic Payment Facilitator (EPF)/Other third party")
     payment_card_transactions: Check = box(None, "Payment card")
@@ -639,10 +639,10 @@ class ScheduleK1_1065(TaxForm):
     HINT = "Partnership K-1: Part I partnership info, Part II partner info, Part III partner's share of current year income with coded boxes."
     MULTI_PAGE = True  # supplemental statements follow the face page
 
-    partnership: Optional[Party] = party("B Partnership's name, address, city, state, and ZIP code", "A Partnership's employer identification number", "A")
+    partnership: Party | None = party("B Partnership's name, address, city, state, and ZIP code", "A Partnership's employer identification number", "A")
     irs_center: Text = box("C", "IRS center where partnership filed return")
     publicly_traded_partnership: Check = box("D", "Check if this is a publicly traded partnership (PTP)")
-    partner: Optional[Party] = party("F Name, address, city, state, and ZIP code for partner", "E Partner's SSN or TIN", "E")
+    partner: Party | None = party("F Name, address, city, state, and ZIP code for partner", "E Partner's SSN or TIN", "E")
     general_partner_or_llc_member_manager: Check = box("G", "General partner or LLC member-manager")
     limited_partner_or_other_llc_member: Check = box("G", "Limited partner or other LLC member")
     domestic_partner: Check = box("H1", "Domestic partner")
@@ -651,7 +651,7 @@ class ScheduleK1_1065(TaxForm):
     profit_share_ending_percent: Percent = box("J", "Partner's share of profit (ending %)")
     loss_share_ending_percent: Percent = box("J", "Partner's share of loss (ending %)")
     capital_share_ending_percent: Percent = box("J", "Partner's share of capital (ending %)")
-    capital_account: Optional[K1CapitalAccount] = Field(default=None, description="Item L: Partner's capital account analysis")
+    capital_account: K1CapitalAccount | None = Field(default=None, description="Item L: Partner's capital account analysis")
     ordinary_business_income: Money = box("1", "Ordinary business income (loss)")
     net_rental_real_estate_income: Money = box("2", "Net rental real estate income (loss)")
     other_net_rental_income: Money = box("3", "Other net rental income (loss)")
@@ -720,7 +720,7 @@ def _submodel(annotation: Any) -> type[BaseModel] | None:
 def form_labels(form: type[BaseModel]) -> list[str]:
     """Every printed label on a form (boxes, party blocks, table columns)."""
     labels: list[str] = []
-    for name, info in form.model_fields.items():
+    for info in form.model_fields.values():
         extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
         for key in ("label", "tin_label"):
             if extra.get(key):

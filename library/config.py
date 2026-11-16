@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -31,8 +31,8 @@ class StrictConfig(BaseModel):
 class Endpoint(StrictConfig):
     provider: Provider
     model: str = Field(min_length=1)
-    base_url: Optional[str] = None
-    api_key_env: Optional[str] = None
+    base_url: str | None = None
+    api_key_env: str | None = None
     timeout_s: float = Field(default=120, gt=0)
 
     @property
@@ -51,7 +51,7 @@ class Endpoint(StrictConfig):
 
 class EmbeddingConfig(Endpoint):
     provider: Literal["openai", "ollama", "openrouter"]
-    dimensions: Optional[int] = Field(default=None, ge=8)
+    dimensions: int | None = Field(default=None, ge=8)
     query_prefix: str = ""
     document_prefix: str = ""
     batch_size: int = Field(default=32, ge=1, le=512)

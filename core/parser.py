@@ -43,7 +43,6 @@ from docling.datamodel.pipeline_options import (
 )
 from docling.document_converter import DocumentConverter, ImageFormatOption, PdfFormatOption
 from docling_core.types.io import DocumentStream
-from fastapi.concurrency import run_in_threadpool
 from PIL import Image, ImageDraw
 
 from core.config import Settings
@@ -62,7 +61,8 @@ SIGNATURES: list[tuple[bytes, str, InputFormat]] = [
     (b"MM\x00*", "image/tiff", InputFormat.IMAGE),
     (b"BM", "image/bmp", InputFormat.IMAGE),
 ]
-EXTENSIONS = {"application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg", "image/tiff": ".tiff", "image/bmp": ".bmp"}
+EXTENSIONS = {"application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg", "image/tiff": ".tiff",
+              "image/bmp": ".bmp"}
 SUPPORTED_MEDIA_TYPES = sorted(EXTENSIONS)
 
 
@@ -112,7 +112,8 @@ class ParsedDocument:
         holes = [p for p in self.missing_pages if pages and min(pages) < p < max(pages)]
         if holes:
             out.append(Flag(field=None, code="missing_page",
-                            message=f"no text could be read from page(s) {', '.join(map(str, holes))} inside this form"))
+                            message=f"no text could be read from page(s) {', '.join(map(str, holes))} "
+                                    "inside this form"))
         return out
 
     def page_image(self, page_no: int) -> np.ndarray | None:
@@ -271,23 +272,24 @@ class DoclingParser:
             page_heights=page_heights(result),
             parse_ms=int((time.perf_counter() - started) * 1000),
             source=data,
-            conversion_errors=[e.error_message for e in result.errors] if result.status is ConversionStatus.PARTIAL_SUCCESS else [],
+            conversion_errors=[e.error_message for e in result.errors]
+            if result.status is ConversionStatus.PARTIAL_SUCCESS else [],
             missing_pages=[p for p in range(1, pages + 1) if p not in read],
         )
 
     async def parse(self, data: bytes, filename: str, max_pages: int | None = None) -> ParsedDocument:
         """Convert in a worker thread, at most `docling_max_concurrency` at a time."""
         async with self._slots:
-            return await run_in_threadpool(self.parse_sync, data, filename, max_pages)
+            return await asyncio.to_thread(self.parse_sync, data, filename, max_pages)
 
     async def quick_text(self, data: bytes, filename: str) -> tuple[str, ParsedDocument | None]:
         """
         Text for classification only. Digital PDFs use the embedded text layer
         (milliseconds, no models); scans and images go through Docling OCR.
         """
-        media_type, fmt = sniff(data)
+        _, fmt = sniff(data)
         if fmt is InputFormat.PDF:
-            pages, embedded = await run_in_threadpool(pdf_text_layer, data)
+            pages, embedded = await asyncio.to_thread(pdf_text_layer, data)
             self._check_pages(pages, None)
             if len(embedded) > 20:
                 return embedded, None

@@ -82,7 +82,7 @@ def parse_money(value: Any) -> Decimal | None:
         amount = Decimal(str(value))
     else:
         text = str(value).strip()
-        negative = text.startswith("(") and text.endswith(")") or text.startswith("-") or text.endswith("-")
+        negative = (text.startswith("(") and text.endswith(")")) or text.startswith("-") or text.endswith("-")
         grouped = _GROUPED.fullmatch(text)
         if grouped:  # OCR mixes up ',' and '.': the separator before the last two digits is the decimal point
             digits = re.sub(r"[.,]", "", grouped.group(1)) + "." + grouped.group(2)
@@ -244,16 +244,23 @@ def parse_state(value: Any) -> str | None:
     return text.upper()
 
 
-def digits_only(text: str) -> str:
-    return re.sub(r"\D", "", text)
-
-
+# One masking policy for everything that leaves extraction as text (chunks, flag messages, assistant tool
+# results). An SSN/ITIN is 3-2-4 digits: written with one separator (dash or space) it is always masked;
+# written as a bare 9-digit run only after a TIN word (SSN, ITIN, TIN, social security), because bare
+# 9-digit integers elsewhere are amounts (spreadsheet cells and OCR text are rendered verbatim), account or
+# control numbers. EINs (`12-3456789`) are never masked; an EIN printed without its dash after "TIN" is.
 _SSN = re.compile(r"\b\d{3}([- ])\d{2}\1(\d{4})\b")
+_BARE_SSN = re.compile(r"(\b(?:SSN|ITIN|TIN|social security(?: number| no\.?)?)\b\W{0,4}(?:#|no\.?|number)?"
+                       r"\W{0,3})\d{5}(\d{4})\b(?![.,]\d)", re.IGNORECASE)
 
 
 def mask_ssns(text: str) -> str:
-    """*Usage:*
-    >>> mask_ssns("SSN 412-56-7890, EIN 84-1736295")
-    'SSN XXX-XX-7890, EIN 84-1736295'
+    """SSNs to their last four digits (policy above).
+
+    *Usage:*
+    >>> mask_ssns("SSN 412-56-7890 / 412 56 7890, EIN 84-1736295")
+    'SSN XXX-XX-7890 / XXX-XX-7890, EIN 84-1736295'
+    >>> mask_ssns("Recipient's TIN: 412567890, account 412567890, wages 412567890")
+    "Recipient's TIN: XXX-XX-7890, account 412567890, wages 412567890"
     """
-    return _SSN.sub(r"XXX-XX-\2", text)
+    return _BARE_SSN.sub(r"\1XXX-XX-\2", _SSN.sub(r"XXX-XX-\2", text))

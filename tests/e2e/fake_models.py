@@ -42,6 +42,7 @@ import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from typing import ClassVar
 
 SAMPLES = Path(__file__).resolve().parents[1] / "samples"
 MODELS = ("qwen3.5:4b", "nomic-embed-text")
@@ -100,7 +101,7 @@ def extraction(body: dict, truths: dict[str, list[dict]]) -> str:
     schema = body.get("format") or {}
     prompt = next((m["content"] for m in body.get("messages", []) if m["role"] == "user"), "")
     title = re.search(r"^Document type: (.+)$", prompt, re.M)
-    form_id = next((k for k, f in FORMS.items() if title and f.TITLE == title.group(1).strip()), None)
+    form_id = next((k for k, f in FORMS.items() if title and title.group(1).strip() == f.TITLE), None)
     if form_id is None or not schema.get("properties"):
         return "{}"
     evidence = prompt.split("<document>", 1)[-1]
@@ -161,7 +162,7 @@ def chat(body: dict) -> dict:
 
 
 class Handler(BaseHTTPRequestHandler):
-    truths: dict[str, list[dict]] = {}
+    truths: ClassVar[dict[str, list[dict]]] = {}
 
     def _send(self, status: int, payload: dict) -> None:
         data = json.dumps(payload).encode()

@@ -116,6 +116,17 @@ def test_review_decisions_approval_and_reopening(library):
     assert library.reopen(form_id, "1").review_status == "pending"
 
 
+def test_document_forms_load_with_their_decisions_in_one_read(library):
+    document = stored_w2(library)
+    form_id = document.forms[0].id
+    decide(library, form_id, "employee.tin", "confirmed")
+    decide(library, form_id, "federal_income_tax_withheld", "corrected", "7,921.08")
+    forms = library.forms(document.id, "1")
+    assert forms == [library.form(f.id, "1") for f in document.forms]  # index order, same as one form at a time
+    assert forms[0].review_status == "pending" and forms[0].checked == 2
+    assert library.forms(document.id, "2") == []  # another key's document
+
+
 def test_unsupported_forms_and_unknown_fields_are_not_reviewed(library):
     document = stored_w2(library)
     with pytest.raises(rules.NotReviewable):
@@ -136,6 +147,21 @@ def test_corrections_rebuild_the_search_chunks(library):
     before = [h.chunk_id for h in search(library, "wages")]
     decide(library, form_id, "employee.tin", "confirmed")  # no value change: chunks untouched
     assert [h.chunk_id for h in search(library, "wages")] == before
+
+
+def test_concurrent_corrections_on_one_form_both_reach_the_chunks(library):
+    form_id = stored_w2(library).forms[0].id
+
+    async def both():
+        await asyncio.gather(*(library.review(form_id, field, ReviewRequest(decision="corrected", value=value),
+                                              REVIEWER, "1")
+                               for field, value in (("wages_tips_other_comp", "70,000.00"), ("control_number", "A-1"))))
+
+    asyncio.run(both())  # without the per-form lock the second chunk rebuild drops the first correction
+    fields = library.form(form_id, "1").corrected_fields
+    assert (fields["wages_tips_other_comp"], fields["control_number"]) == (70000.0, "A-1")
+    content = search(library, "wages_tips_other_comp")[0].content
+    assert "wages_tips_other_comp: 70000.0" in content and "control_number: A-1" in content
 
 
 def test_owner_isolation_for_forms(library):

@@ -11,6 +11,8 @@ The library's system of record: one SQLite file (`library.database`).
     document_chunks  searchable sections: text, section title, page/sheet, form id, tax year, embedding
                      (float32 blob, L2-normalised); `form_id` links a form's chunks so they can be rebuilt
     chunk_text       FTS5 index of chunk titles and text (kept in sync by triggers)
+    chunk_usage      per chunk: how often a search or an assistant surfaced it, and when last (the knowledge
+                     map shows what was never retrieved, so rarely used passages stay discoverable)
     meta             the embedding model and size the library was built with
 
 Every query takes `owner`: an API key id, or None for admin keys (every
@@ -23,11 +25,11 @@ import json
 import sqlite3
 import threading
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 
 import numpy as np
 
@@ -35,6 +37,7 @@ from core.forms import FORMS
 from core.schema import ClassificationResult, FormResult, ValidationReport
 from library.ingest import ChunkDraft, DocumentDraft
 from library.schema import (
+    WORKSPACE_PREFIX,
     ClientStats,
     DocumentDetail,
     DocumentFilters,
@@ -42,8 +45,12 @@ from library.schema import (
     LibraryDocument,
     LibraryStats,
     PageInfo,
+    Passage,
+    PassageList,
     Review,
     SearchFilters,
+    SourceList,
+    SourceSummary,
 )
 
 SCHEMA_VERSION = 2  # PRAGMA user_version; 0 = new file
@@ -134,7 +141,17 @@ CREATE TRIGGER IF NOT EXISTS chunks_ad AFTER DELETE ON document_chunks BEGIN
     INSERT INTO chunk_text(chunk_text, rowid, section_title, content)
     VALUES ('delete', old.seq, old.section_title, old.content);
 END;
+
+-- Added without a version bump: older files gain the table on first use, and nothing else changed.
+CREATE TABLE IF NOT EXISTS chunk_usage (
+    seq INTEGER PRIMARY KEY REFERENCES document_chunks(seq) ON DELETE CASCADE,
+    hits INTEGER NOT NULL DEFAULT 0,
+    last_hit TEXT
+);
 """
+
+MAX_SECTIONS = 12  # section titles listed per source
+_WORKSPACE_LIKE = WORKSPACE_PREFIX.replace("_", "\\_") + "%"  # no LIKE wildcards in the prefix today; stay safe
 
 # Flagged fields of form `f` without a review decision.
 OPEN_FLAGS = ("(SELECT count(*) FROM json_each(f.flagged_fields) j WHERE NOT EXISTS"
@@ -175,12 +192,13 @@ class StoredForm:
 
 
 def now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def where(filters: SearchFilters, owner: str | None) -> tuple[str, list]:
     """SQL conditions over `d` (documents) and `c` (chunks). `owner=None`: every owner (admin keys)."""
     review_status, q = getattr(filters, "review_status", None), getattr(filters, "q", None)
+    origin = getattr(filters, "origin", None)
     like = "%" + (q or "").replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
     clauses = [
         ("d.owner = ?", [owner]) if owner is not None else None,
@@ -192,6 +210,8 @@ def where(filters: SearchFilters, owner: str | None) -> tuple[str, list]:
         (_PENDING, []) if review_status == "pending" else None,
         (f"{_APPROVED} AND NOT {_PENDING}", []) if review_status == "approved" else None,
         ("(d.title LIKE ? ESCAPE '\\' OR d.client LIKE ? ESCAPE '\\')", [like, like]) if q else None,
+        ("d.location LIKE ? ESCAPE '\\'", [_WORKSPACE_LIKE]) if origin == "workspace" else None,
+        ("d.location NOT LIKE ? ESCAPE '\\'", [_WORKSPACE_LIKE]) if origin == "upload" else None,
     ]
     clauses = [c for c in clauses if c]
     return " AND ".join(sql for sql, _ in clauses) or "1", [p for _, values in clauses for p in values]
@@ -207,7 +227,7 @@ def _matching(filters: SearchFilters, owner: str | None) -> tuple[str, list]:
 def _document(row: sqlite3.Row) -> LibraryDocument:
     skip = {"types", "pages"}
     return LibraryDocument(
-        **{k: row[k] for k in row.keys() if k not in skip},
+        **{k: row[k] for k in row.keys() if k not in skip},  # noqa: SIM118 (sqlite3.Row)
         document_types=sorted(row["types"].split(",")) if row["types"] else [],
         page_count=len(json.loads(row["pages"])),
         review_status="pending" if row["forms_pending"] else "approved" if row["forms_approved"] else None,
@@ -226,10 +246,24 @@ def _form_result(row: sqlite3.Row) -> FormResult:
     )
 
 
-def _review(row: sqlite3.Row) -> Review:
+def _review(row: sqlite3.Row | dict) -> Review:
     return Review(decision=row["decision"], value=json.loads(row["value"]) if row["value"] is not None else None,
                   note=row["note"], reviewer=row["reviewer"], reviewer_id=row["reviewer_id"],
                   updated_at=row["updated_at"])
+
+
+# Form rows with their decisions as one JSON array (`decisions`), so forms and reviews load in one query.
+_FORM_ROWS = ("SELECT f.*, (SELECT json_group_array(json_object('field', r.field, 'decision', r.decision,"
+              " 'value', r.value, 'note', r.note, 'reviewer', r.reviewer, 'reviewer_id', r.reviewer_id,"
+              " 'updated_at', r.updated_at)) FROM reviews r WHERE r.form_id = f.id) AS decisions"
+              " FROM forms f JOIN documents d ON d.id = f.document_id")
+
+
+def _stored_form(row: sqlite3.Row) -> StoredForm:
+    return StoredForm(id=row["id"], document_id=row["document_id"], result=_form_result(row),
+                      review_status=row["review_status"], approved_by=row["approved_by"],
+                      approved_at=row["approved_at"],
+                      reviews={r["field"]: _review(r) for r in json.loads(row["decisions"])})
 
 
 def index_dimensions(conn: sqlite3.Connection, model_id: str, vectors: np.ndarray | None = None) -> int | None:
@@ -366,6 +400,85 @@ class Store:
             conn.execute("DELETE FROM documents WHERE id = ?", (document_id,))
         return row["content_hash"]
 
+    def at_location(self, owner: str, location: str) -> list[tuple[str, str]]:
+        """(document id, content hash) of the owner's documents stored under `location`, newest first."""
+        with self.connect() as conn:
+            rows = conn.execute("SELECT id, content_hash FROM documents WHERE owner = ? AND location = ?"
+                                " ORDER BY created_at DESC", (owner, location)).fetchall()
+        return [(row["id"], row["content_hash"]) for row in rows]
+
+    # --- the index, browsable ----------------------------------------------------------------
+
+    @staticmethod
+    def record_hits(conn: sqlite3.Connection, chunk_ids: list[str]) -> None:
+        """Count one retrieval for each chunk (a search hit, or a passage an assistant read)."""
+        if not chunk_ids:
+            return
+        conn.execute(
+            "INSERT INTO chunk_usage (seq, hits, last_hit) SELECT seq, 1, ? FROM document_chunks"
+            f" WHERE id IN ({','.join('?' * len(chunk_ids))})"
+            " ON CONFLICT (seq) DO UPDATE SET hits = hits + 1, last_hit = excluded.last_hit", [now(), *chunk_ids])
+
+    def sources(self, filters: DocumentFilters, owner: str | None, limit: int, offset: int,
+                unused_only: bool = False) -> SourceList:
+        """The index by source. Totals cover the scope (owner, `document_ids`, `origin`); `q` and `unused_only`
+        narrow the page. Sources with never-retrieved passages come first when `unused_only`, else the newest."""
+        scope = DocumentFilters(origin=filters.origin).model_copy(update={"document_ids": filters.document_ids})
+        scoped, scope_params = _matching(scope, owner)
+        matching, params = _matching(filters, owner)
+        usage = ("FROM documents d LEFT JOIN document_chunks c ON c.document_id = d.id"
+                 " LEFT JOIN chunk_usage u ON u.seq = c.seq")
+        per_source = ("SELECT d.id AS document_id, d.title, d.type, d.location, d.created_at,"
+                      " count(c.seq) AS passages, count(c.seq) - count(u.seq) AS never_retrieved,"
+                      f" max(u.last_hit) AS last_retrieved_at {usage} WHERE d.id IN ({matching}) GROUP BY d.id"
+                      + (" HAVING never_retrieved > 0" if unused_only else ""))
+        order = "never_retrieved DESC, created_at DESC" if unused_only else "created_at DESC"
+        with self.connect() as conn:
+            totals = conn.execute(f"SELECT count(DISTINCT d.id), count(c.seq), count(c.seq) - count(u.seq) {usage}"
+                                  f" WHERE d.id IN ({scoped})", scope_params).fetchone()
+            count = conn.execute(f"SELECT count(*) FROM ({per_source})", params).fetchone()[0]
+            rows = conn.execute(f"{per_source} ORDER BY {order} LIMIT ? OFFSET ?", [*params, limit, offset]).fetchall()
+            sections = self._sections(conn, [r["document_id"] for r in rows])
+        return SourceList(sources=totals[0], passages=totals[1], never_retrieved=totals[2], count=count,
+                          items=[SourceSummary(**dict(r), sections=sections.get(r["document_id"], [])) for r in rows])
+
+    @staticmethod
+    def _sections(conn: sqlite3.Connection, document_ids: list[str]) -> dict[str, list[str]]:
+        """document id -> its distinct section titles in document order, at most `MAX_SECTIONS`."""
+        if not document_ids:
+            return {}
+        rows = conn.execute(
+            "SELECT document_id, section_title FROM document_chunks WHERE section_title != ''"
+            f" AND document_id IN ({','.join('?' * len(document_ids))}) GROUP BY document_id, section_title"
+            " ORDER BY document_id, min(chunk_index)", document_ids)
+        found: dict[str, list[str]] = {}
+        for document_id, title in rows:
+            titles = found.setdefault(document_id, [])
+            if len(titles) < MAX_SECTIONS:
+                titles.append(title)
+        return found
+
+    def passages(self, document_id: str, owner: str | None, limit: int, offset: int,
+                 record: bool = False) -> PassageList | None:
+        """A document's passages in order, in full; None when the owner may not read it. `record`: count the
+        returned passages as retrieved (an assistant read them)."""
+        sql, params = where(SearchFilters(document_ids=[document_id]), owner)
+        with self.connect() as conn:
+            document = conn.execute("SELECT d.title, (SELECT count(*) FROM document_chunks c"
+                                    f" WHERE c.document_id = d.id) AS count FROM documents d WHERE {sql}",
+                                    params).fetchone()
+            if document is None:
+                return None
+            rows = conn.execute(
+                'SELECT c.id AS chunk_id, c.chunk_index AS "index", c.section_title, c.page_number, c.sheet_name,'
+                " c.document_type, c.content, coalesce(u.hits, 0) AS retrievals, u.last_hit AS last_retrieved_at"
+                " FROM document_chunks c LEFT JOIN chunk_usage u ON u.seq = c.seq WHERE c.document_id = ?"
+                " ORDER BY c.chunk_index LIMIT ? OFFSET ?", (document_id, limit, offset)).fetchall()
+            if record:
+                self.record_hits(conn, [r["chunk_id"] for r in rows])
+        return PassageList(document_id=document_id, title=document["title"], count=document["count"],
+                           passages=[Passage(**dict(r)) for r in rows])
+
     def hash_in_use(self, content_hash: str) -> bool:
         """True when another document (another owner's upload of the same file) still uses the file."""
         with self.connect() as conn:
@@ -404,14 +517,15 @@ class Store:
     def form(self, form_id: str, owner: str | None) -> StoredForm | None:
         sql, params = where(SearchFilters(), owner)
         with self.connect() as conn:
-            row = conn.execute(f"SELECT f.* FROM forms f JOIN documents d ON d.id = f.document_id"
-                               f" WHERE f.id = ? AND {sql}", [form_id, *params]).fetchone()
-            if row is None:
-                return None
-            reviews = conn.execute("SELECT * FROM reviews WHERE form_id = ?", (form_id,)).fetchall()
-        return StoredForm(id=row["id"], document_id=row["document_id"], result=_form_result(row),
-                          review_status=row["review_status"], approved_by=row["approved_by"],
-                          approved_at=row["approved_at"], reviews={r["field"]: _review(r) for r in reviews})
+            row = conn.execute(f"{_FORM_ROWS} WHERE f.id = ? AND {sql}", [form_id, *params]).fetchone()
+        return _stored_form(row) if row else None
+
+    def forms(self, document_id: str, owner: str | None) -> list[StoredForm]:
+        """Every form of a document in index order, with its decisions; empty when the owner may not read it."""
+        sql, params = where(SearchFilters(document_ids=[document_id]), owner)
+        with self.connect() as conn:
+            rows = conn.execute(f"{_FORM_ROWS} WHERE {sql} ORDER BY f.idx", params).fetchall()
+        return [_stored_form(r) for r in rows]
 
     def save_review(self, form: StoredForm, path: str, review: Review | None, model_id: str,
                     chunks: list[ChunkDraft] | None = None, vectors: np.ndarray | None = None) -> None:

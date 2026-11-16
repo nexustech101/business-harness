@@ -15,8 +15,8 @@ routes (`api.deps.job_slot`) and the assistant's `extract_document` tool.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 
 class Busy(RuntimeError):

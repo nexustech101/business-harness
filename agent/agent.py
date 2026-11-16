@@ -11,23 +11,30 @@ The assistant: a chat model reached over HTTP, with tools.
 Conversations are kept in OpenAI's message format (system / user / assistant
 with `tool_calls` / tool) and converted at the edge for Anthropic.
 
-`Assistant.reply` runs the tool loop: the model either answers or calls
-tools (`agent.tools.TOOLS`); tool results go back as messages; after
-`max_tool_rounds` rounds the model is asked once more without tools, so it
-must answer. Every excerpt a search returns is numbered once per conversation
-turn and returned as `sources`, which the answer cites as [n]; every call is
-listed in `tool_calls`.
+`tool_loop` is the tool loop every assistant shares (the document assistant
+here, the business partner and the role assistants in `business/`): the model
+either answers or calls tools; each call goes to the caller's async `dispatch`
+and its text goes back as a `tool` message; after `max_rounds` rounds the
+model is asked once more without tools, so it must answer.
+
+`Assistant.reply` runs it with the document tools (`agent.tools.TOOLS`).
+Every excerpt a search returns is numbered once per conversation turn and
+returned as `sources`, which the answer cites as [n]; every call is listed in
+`tool_calls`.
 
 *Usage:*
 >>> assistant = Assistant(config.assistant, ChatClient(config.chat), library)
 >>> response = await assistant.reply(ChatRequest(messages=[...]), owner="7", pipeline=pipeline, jobs=jobs)
+>>> reply, usage = await tool_loop(chat, messages, [tool.spec], dispatch, max_rounds=4)
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 from collections import Counter
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 import httpx
@@ -80,10 +87,8 @@ def _openai_reply(data: dict) -> Reply:
     calls = []
     for call in message.get("tool_calls") or []:
         arguments = call["function"].get("arguments") or "{}"
-        try:
+        with contextlib.suppress(json.JSONDecodeError):
             arguments = json.loads(arguments) if isinstance(arguments, str) else arguments
-        except json.JSONDecodeError:
-            pass
         if not isinstance(arguments, dict):
             arguments = {"_invalid": arguments}
         calls.append(ToolCall(call.get("id") or f"call_{len(calls)}", call["function"]["name"], arguments))
@@ -157,13 +162,37 @@ class ChatClient:
             raise ChatUnavailable(f"chat request to {c.url} failed: {exc!r}") from exc
 
 
-# --- Assistant -------------------------------------------------------------------------------
+# --- Tool loop ---------------------------------------------------------------------------------
+
+# One tool call and the model's text of the same turn -> the text the model reads back.
+Dispatch = Callable[[ToolCall, str], Awaitable[str]]
 
 
 def _assistant_turn(reply: Reply) -> dict:
     return {"role": "assistant", "content": reply.text or None, "tool_calls": [
         {"id": t.id, "type": "function", "function": {"name": t.name, "arguments": json.dumps(t.arguments)}}
         for t in reply.tool_calls]}
+
+
+async def tool_loop(chat: ChatClient, messages: list[dict], tools: list[dict], dispatch: Dispatch,
+                    max_rounds: int) -> tuple[Reply, dict]:
+    """
+    (final reply, summed token usage). `messages` (OpenAI format) is extended in place with the assistant
+    turns and tool results; calls of one turn are dispatched in order.
+    """
+    usage: Counter = Counter()
+    for round_ in range(max_rounds + 1):
+        reply = await chat.complete(messages, tools if round_ < max_rounds else [])
+        usage.update({k: v for k, v in reply.usage.items() if isinstance(v, int)})
+        if not reply.tool_calls or round_ == max_rounds:
+            break
+        messages.append(_assistant_turn(reply))
+        for call in reply.tool_calls:
+            messages.append({"role": "tool", "tool_call_id": call.id, "content": await dispatch(call, reply.text)})
+    return reply, dict(usage)
+
+
+# --- Assistant -------------------------------------------------------------------------------
 
 
 class Assistant:
@@ -179,23 +208,18 @@ class Assistant:
         ctx = ToolContext(library=self.library, scope=request.scope, owner=owner, pipeline=pipeline, jobs=jobs)
         messages = [{"role": "system", "content": self.settings.system_prompt}]
         messages += [m.model_dump() for m in request.messages]
-        usage: Counter = Counter()
         calls: list[ToolCallInfo] = []
-        rounds = self.settings.max_tool_rounds
-        for round_ in range(rounds + 1):
-            reply = await self.chat.complete(messages, self.tools if round_ < rounds else [])
-            usage.update({k: v for k, v in reply.usage.items() if isinstance(v, int)})
-            if not reply.tool_calls or round_ == rounds:
-                break
-            messages.append(_assistant_turn(reply))
-            for call in reply.tool_calls:
-                calls.append(ToolCallInfo(name=call.name, arguments=call.arguments))
-                messages.append({"role": "tool", "tool_call_id": call.id, "content": await self._run(call, ctx)})
+
+        async def dispatch(call: ToolCall, _text: str) -> str:
+            calls.append(ToolCallInfo(name=call.name, arguments=call.arguments))
+            return await self._run(call, ctx)
+
+        reply, usage = await tool_loop(self.chat, messages, self.tools, dispatch, self.settings.max_tool_rounds)
         log.info("assistant replied", extra={"ctx": {"tools": [c.name for c in calls], "sources": len(ctx.sources),
                                                      **usage}})
         return ChatResponse(
             message=ChatMessage(role="assistant", content=reply.text.strip() or "The model returned no answer."),
-            sources=list(ctx.sources.values()), tool_calls=calls, model=self.chat.config.model, usage=dict(usage))
+            sources=list(ctx.sources.values()), tool_calls=calls, model=self.chat.config.model, usage=usage)
 
     @staticmethod
     async def _run(call: ToolCall, ctx: ToolContext) -> str:

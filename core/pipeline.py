@@ -35,7 +35,7 @@ from core.config import Settings
 from core.extractor import LLMExtractor
 from core.flags import Flag
 from core.forms import FORMS, TaxForm, form_for
-from core.parser import ConversionFailed, DocumentTooLarge, DoclingParser, ParsedDocument, UnsupportedDocument
+from core.parser import ConversionFailed, DoclingParser, DocumentTooLarge, ParsedDocument, UnsupportedDocument
 from core.schema import (
     BulkExtractResponse,
     BulkSummary,
@@ -157,7 +157,8 @@ class TaxDocumentPipeline:
             try:
                 started = time.perf_counter()
                 await warm()
-                log.info("model warm", extra={"ctx": {"model": name, "ms": int((time.perf_counter() - started) * 1000)}})
+                ms = int((time.perf_counter() - started) * 1000)
+                log.info("model warm", extra={"ctx": {"model": name, "ms": ms}})
             except Exception as exc:  # startup must not fail because Ollama is down
                 log.warning("model warm-up failed", extra={"ctx": {"model": name, "error": str(exc)}})
 

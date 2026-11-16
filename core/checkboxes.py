@@ -26,9 +26,9 @@ extraction model's reading stands.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from difflib import SequenceMatcher
-from typing import Callable, Iterable
 
 import cv2
 import numpy as np
@@ -167,7 +167,8 @@ def find_squares(gray: np.ndarray, page: int, dark: np.ndarray | None = None) ->
             component[:edge].any(axis=0).mean(), component[-edge:].any(axis=0).mean(),
             component[:, :edge].any(axis=1).mean(), component[:, -edge:].any(axis=1).mean(),
         )
-        corners = (component[:edge, :edge], component[:edge, -edge:], component[-edge:, :edge], component[-edge:, -edge:])
+        corners = (component[:edge, :edge], component[:edge, -edge:],
+                   component[-edge:, :edge], component[-edge:, -edge:])
         if min(sides) < 0.8 or not all(c.any() for c in corners):
             continue
         inset = max(edge + 1, round(min(w, h) * 0.22))

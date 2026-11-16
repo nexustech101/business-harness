@@ -3,8 +3,8 @@
 The whole API on fake models, for end-to-end tests and local UI work without
 GPUs: starts `tests.e2e.fake_models`, points the API at it (`OLLAMA_URL`, a
 generated assistant config), uses a fresh data directory (key database,
-library database, original files), creates an admin and a client key, and
-serves the API (and `web/dist`, when built) with uvicorn.
+library database, original files, business database), creates an admin and a
+client key, and serves the API (and `web/dist`, when built) with uvicorn.
 
 Prints one JSON line `{"api", "admin_key", "client_key", "data"}` when the
 keys exist (before the server accepts requests), and writes the same JSON to
@@ -35,6 +35,7 @@ def configure(data: Path, models_port: int) -> None:
     config = yaml.safe_load((ROOT / "config" / "model_config.yml").read_text(encoding="utf-8"))
     config["chat"]["base_url"] = config["embeddings"]["base_url"] = f"{models}/v1"
     config["library"].update(database=str(data / "library.db"), files=str(data / "files"))
+    config["business"]["database"] = str(data / "business.db")
     (data / "model_config.yml").write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     os.environ.update(DATABASE_URL=f"sqlite:///{(data / 'keys.db').as_posix()}", OLLAMA_URL=models, TEV_MODEL="none",
                       ASSISTANT_CONFIG=str(data / "model_config.yml"), LOG_JSON="false")

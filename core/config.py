@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=PROJECT_ROOT / ".env", extra="ignore")
 
     # --- API -----------------------------------------------------------------
-    app_name: str = "Tax Document API"
+    app_name: str = "Business Partner API"
     log_level: str = "INFO"
     log_json: bool = True
     database_url: str = f"sqlite:///{PROJECT_ROOT / 'tax_document_database.db'}"

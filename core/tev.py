@@ -111,7 +111,8 @@ class TevClassifier:
                 questions={
                     "document_type": {
                         "type": "choice",
-                        "instructions": "Which US tax form is this document? Judge by the form number and title printed on it.",
+                        "instructions": "Which US tax form is this document? "
+                                        "Judge by the form number and title printed on it.",
                         "criteria": self._criteria,
                     },
                 },
@@ -155,11 +156,12 @@ class HeadingClassifier:
         return None
 
     async def classify(self, text: str) -> Classification:
-        from core.segment import find_headings
         from core.layout import Block
+        from core.segment import find_headings
 
         started = time.perf_counter()
-        lines = [Block(1, 0.0, float(i), 1000.0, float(i) + 0.5, line) for i, line in enumerate(text.splitlines()) if line.strip()]
+        lines = [Block(1, 0.0, float(i), 1000.0, float(i) + 0.5, line)
+                 for i, line in enumerate(text.splitlines()) if line.strip()]
         found = [h.form_id for h in find_headings(lines)]
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         if not found:

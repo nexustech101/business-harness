@@ -18,9 +18,10 @@ and is what the extraction LLM sees.
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from difflib import SequenceMatcher
-from typing import Iterable
+from itertools import pairwise
 
 from docling.datamodel.document import ConversionResult
 from docling_core.types.doc import DoclingDocument, TableItem, TextItem
@@ -40,7 +41,7 @@ class Block:
     bottom: float
     text: str
     is_label: bool = False
-    values: list["Block"] = field(default_factory=list)
+    values: list[Block] = field(default_factory=list)
     ocr: bool = False  # read by OCR (scan/photo region) rather than a PDF text layer
 
 
@@ -64,12 +65,13 @@ def blocks_from_conversion(result: ConversionResult) -> list[Block]:
         for cell in page.cells:
             box = cell.rect.to_bounding_box().to_top_left_origin(page.size.height)
             pieces = [] if cell.from_ocr else _split_on_gaps(box, words, page.size.height)
-            for l, t, r, b, text in pieces or [(box.l, box.t, box.r, box.b, cell.text)]:
+            for left, top, right, bottom, text in pieces or [(box.l, box.t, box.r, box.b, cell.text)]:
                 text = re.sub(r"\s+", " ", text).strip()
                 if text in CHECK_MARKS:
                     text = "X"
                 if text:
-                    blocks.append(Block(page.page_no, l * k, t * k, r * k, b * k, text, ocr=bool(cell.from_ocr)))
+                    blocks.append(Block(page.page_no, left * k, top * k, right * k, bottom * k, text,
+                                        ocr=bool(cell.from_ocr)))
     if not blocks:
         return blocks_from_document(result.document)
     blocks.sort(key=lambda b: (b.page, round(b.top / 4), b.left))
@@ -97,7 +99,7 @@ def _split_on_gaps(line_box, words, page_height: float) -> list[tuple[float, flo
     inside.sort(key=lambda x: x[0].l)
     height = max(line_box.b - line_box.t, 1.0)
     runs, current = [], [inside[0]]
-    for prev, cur in zip(inside, inside[1:]):
+    for prev, cur in pairwise(inside):
         if cur[0].l - prev[0].r > max(height, 4.0):  # word spacing is ~0.3x height
             runs.append(current)
             current = []
@@ -162,7 +164,8 @@ def label_words(text: str) -> str:
 
 def _strip_box_prefix(text: str) -> str:
     """'1 Wages, tips' -> 'wages tips'; 'Box 15: State' -> 'state'."""
-    return re.sub(r"^(box(es)?\s+)?[0-9]{1,2}[a-z]?(\s*-\s*[0-9]{1,2}[a-z]?)?\b\s*|^[a-z]{1,2}[0-9]?\s+(?=[a-z])", "", _norm(text))
+    return re.sub(r"^(box(es)?\s+)?[0-9]{1,2}[a-z]?(\s*-\s*[0-9]{1,2}[a-z]?)?\b\s*|^[a-z]{1,2}[0-9]?\s+(?=[a-z])", "",
+                  _norm(text))
 
 
 class LabelMatcher:

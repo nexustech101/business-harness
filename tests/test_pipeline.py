@@ -15,6 +15,7 @@ from docling.datamodel.base_models import ConversionStatus
 
 from core.config import get_settings
 from core.extractor import Extraction
+from core.forms import W2
 from core.layout import Block
 from core.parser import ConversionFailed, DoclingParser, ParsedDocument
 from core.pipeline import TaxDocumentPipeline
@@ -145,3 +146,23 @@ def test_parser_refuses_a_file_without_any_text(parser):
     with pytest.raises(ConversionFailed, match="No text could be read"):
         parser.parse_sync(_pdf(1), "blank.pdf")
 
+
+def test_identity_covers_tax_year_and_transaction_rows():
+    from core.forms import Form1099B
+    from core.pipeline import identity
+
+    base = {"tax_year": 2025, "payer": {"name": "Lakeview", "tin": "41-1228890"}, "account_number": "5521-0098",
+            "transactions": [{"description": "100 SH APPLE INC", "proceeds": "19,450.00", "cost_basis": "17,210.00"}]}
+    other_sale = {**base, "transactions": [{"description": "50 SH MSFT", "proceeds": "2,900.00", "cost_basis": "3,400.00"}]}
+    other_year = {**base, "tax_year": 2024}
+    key = identity(Form1099B.model_validate(base))
+    assert key == identity(Form1099B.model_validate(base))  # a true copy
+    assert key != identity(Form1099B.model_validate(other_sale))
+    assert key != identity(Form1099B.model_validate(other_year))
+
+
+def test_identity_needs_a_tin_or_amount():
+    from core.pipeline import identity
+
+    assert identity(W2.model_validate({"tax_year": 2025, "control_number": "A1"})) is None
+    assert identity(W2.model_validate({"wages_tips_other_comp": "0.00"})) is not None

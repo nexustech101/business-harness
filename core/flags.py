@@ -26,7 +26,7 @@ Adding a code: add it to `FlagCode` (the OpenAPI schema lists it) and to this ta
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -41,7 +41,7 @@ FlagCode = Literal[
 class Flag(BaseModel):
     """Something a reviewer should check."""
 
-    field: Optional[str] = Field(
+    field: str | None = Field(
         description="Field path (e.g. `employee.tin`, `box12[0].amount`), as in `sources`; null: the whole form.")
     code: FlagCode = Field(description="What kind of problem; see the table in core/flags.py.")
     message: str = Field(description="Human-readable explanation. SSNs in it are masked to the last four digits.")

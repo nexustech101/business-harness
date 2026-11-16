@@ -188,80 +188,91 @@ def _row_source(label: str, line: list[Block]) -> ValueSource:
                             round(max(b.right for b in line), 1), round(max(b.bottom for b in line), 1)))
 
 
-def verify(form: BaseModel, paired: list[Block], table_lines: dict[str, list[list[Block]]] | None = None) -> Verification:
-    """
-    Check every amount and TIN of `form` against `paired` (output of `pair_blocks`) and locate the other values.
-    Removes amounts and TINs that are not printed or sit under another label, in place.
-    `table_lines`: field name -> printed lines of each row read by `core.tables`.
-    """
-    index = _Index(paired)
-    result = Verification()
-    tables = table_lines or {}
+class _Verifier:
+    """One `verify` run: the index of printed values, the tables read row by row, and the result being built."""
 
-    def check(owner: BaseModel, name: str, value: object, path: str, labels: list[str]) -> None:
+    def __init__(self, paired: list[Block], tables: dict[str, list[list[Block]]]):
+        self.index = _Index(paired)
+        self.tables = tables
+        self.result = Verification()
+
+    def check(self, owner: BaseModel, name: str, value: object, path: str, labels: list[str]) -> None:
         key = _key(value)
         if key is None:
             return
         shown = f"TIN ending {str(value)[-4:]}" if key[0] == "tin" else str(value)  # flags reach logs and emails
-        found = index.where.get(key, [])
-        own = index.labelled(labels)
+        found = self.index.where.get(key, [])
+        own = self.index.labelled(labels)
         under_own = [f for f in found if f.anchor is not None and f.anchor in own]
         if under_own:
-            result.sources[path] = _source(under_own[0])
+            self.result.sources[path] = _source(under_own[0])
         elif not found:
-            setattr(owner, name, None)
-            result.dropped.append(path)
-            result.flags.append(Flag(field=path, code="not_printed",
-                                     message=f"removed, {shown} is not printed in the document"))
+            self._drop(owner, name, path, "not_printed", f"removed, {shown} is not printed in the document")
         elif own and all(f.anchor is not None for f in found):
-            setattr(owner, name, None)
-            result.dropped.append(path)
-            other = found[0].anchor.text
-            result.flags.append(Flag(field=path, code="wrong_label",
-                                     message=f"removed, {shown} is printed under '{other}', not under its own label"))
+            self._drop(owner, name, path, "wrong_label",
+                       f"removed, {shown} is printed under '{found[0].anchor.text}', not under its own label")
         else:
-            result.sources[path] = _source(found[0])
-            result.flags.append(Flag(field=path, code="unlabeled",
-                                     message=f"{shown} is printed in the document, but not in its labeled box; check it"))
+            self.result.sources[path] = _source(found[0])
+            self.result.flags.append(Flag(field=path, code="unlabeled",
+                                          message=f"{shown} is printed in the document, but not in its labeled box; "
+                                                  "check it"))
 
-    def locate(value: object, path: str, labels: list[str]) -> None:
+    def _drop(self, owner: BaseModel, name: str, path: str, code: str, message: str) -> None:
+        setattr(owner, name, None)
+        self.result.dropped.append(path)
+        self.result.flags.append(Flag(field=path, code=code, message=message))
+
+    def locate(self, value: object, path: str, labels: list[str]) -> None:
         """Source of a value that is not checked: under its own label first, then anywhere; never removed."""
-        own = index.labelled(labels)
+        own = self.index.labelled(labels)
         if isinstance(value, bool):
             if own:
-                result.sources[path] = _source(_Found(own[0], own[0]))
+                self.result.sources[path] = _source(_Found(own[0], own[0]))
             return
         wanted = [f" {s} " for s in _spellings(value)]
-        for found in [f for f in index.found if f.anchor in own] + index.found + [_Found(None, a) for a in index.anchors]:
+        index = self.index
+        candidates = [f for f in index.found if f.anchor in own] + index.found
+        candidates += [_Found(None, a) for a in index.anchors]
+        for found in candidates:
             text = f" {_norm(found.block.text)} "
             if any(w in text and (len(w) > 4 or found.anchor in own or text == w) for w in wanted):
-                result.sources[path] = _source(found)
+                self.result.sources[path] = _source(found)
                 return
 
-    def walk(obj: BaseModel, path: str, inherited: list[str] | None, around: list[str] | tuple = ()) -> None:
+    def walk(self, obj: BaseModel, path: str, inherited: list[str] | None, around: list[str] | tuple = ()) -> None:
         for name, info in type(obj).model_fields.items():
             value = getattr(obj, name)
             here = f"{path}{name}"
             labels = inherited if inherited is not None else _labels(info)
             if isinstance(value, list):
-                if name in tables:  # read row by row from the layout: positions are the source
-                    for i, line in enumerate(tables[name][:len(value)]):
-                        result.sources[f"{here}[{i}]"] = _row_source(name, line)
-                    continue
-                for i, row in enumerate(value):
-                    if isinstance(row, BaseModel):
-                        walk(row, f"{here}[{i}].", _row_labels(info))
+                self._rows(value, name, here, info)
             elif isinstance(value, BaseModel):
                 party_tin = _labels(info, "tin_label")
                 if party_tin and getattr(value, "tin", None):
-                    check(value, "tin", value.tin, f"{here}.tin", party_tin)
-                walk(value, here + ".", inherited, labels or around)
-            elif isinstance(value, Decimal):
-                check(obj, name, value, here, labels)
-            elif (name == "ssn" or name.endswith("_ssn")) and isinstance(value, str):
-                check(obj, name, value, here, labels)
-            elif value is not None and here not in result.sources:  # party TINs are checked above
-                locate(value, here, labels or around)
+                    self.check(value, "tin", value.tin, f"{here}.tin", party_tin)
+                self.walk(value, here + ".", inherited, labels or around)
+            elif isinstance(value, Decimal) or ((name == "ssn" or name.endswith("_ssn")) and isinstance(value, str)):
+                self.check(obj, name, value, here, labels)
+            elif value is not None and here not in self.result.sources:  # party TINs are checked above
+                self.locate(value, here, labels or around)
 
-    walk(form, "", None)
-    return result
+    def _rows(self, rows: list, name: str, here: str, info) -> None:
+        if name in self.tables:  # read row by row from the layout: positions are the source
+            for i, line in enumerate(self.tables[name][:len(rows)]):
+                self.result.sources[f"{here}[{i}]"] = _row_source(name, line)
+            return
+        for i, row in enumerate(rows):
+            if isinstance(row, BaseModel):
+                self.walk(row, f"{here}[{i}].", _row_labels(info))
+
+
+def verify(form: BaseModel, paired: list[Block],
+           table_lines: dict[str, list[list[Block]]] | None = None) -> Verification:
+    """
+    Check every amount and TIN of `form` against `paired` (output of `pair_blocks`) and locate the other values.
+    Removes amounts and TINs that are not printed or sit under another label, in place.
+    `table_lines`: field name -> printed lines of each row read by `core.tables`.
+    """
+    verifier = _Verifier(paired, table_lines or {})
+    verifier.walk(form, "", None)
+    return verifier.result

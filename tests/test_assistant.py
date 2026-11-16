@@ -102,6 +102,11 @@ def test_xlsx_rows_keep_their_sheet():
 def test_ssns_are_masked_but_eins_kept():
     assert mask_ssns("SSN 412-56-7890 / 412 56 7890, EIN 84-1736295, acct 123456789") == \
         "SSN XXX-XX-7890 / XXX-XX-7890, EIN 84-1736295, acct 123456789"
+    # bare 9 digits only after a TIN word; elsewhere they are amounts (spreadsheet cells), accounts, control numbers
+    assert mask_ssns("Recipient's TIN: 412567890 | SSN #412567890 | social security number\n412567890") == \
+        "Recipient's TIN: XXX-XX-7890 | SSN #XXX-XX-7890 | social security number\nXXX-XX-7890"
+    assert mask_ssns("wages, 412567890 | TIN 412567890.00 | SSN 4125678901 | TINY 412567890") == \
+        "wages, 412567890 | TIN 412567890.00 | SSN 4125678901 | TINY 412567890"
 
 
 def test_unsupported_files_are_refused():
@@ -157,7 +162,7 @@ def test_search_filters_by_metadata_and_ranks_by_meaning(library):
     add(library, draft("wages tips other compensation 68412.55", client="Okafor", tax_year=2024,
                        document_type="w2", title="okafor-w2"))
     hits = search(library, "mortgage interest", client="okafor")  # client match ignores case
-    assert [h.title for h in hits][0] == "okafor-1098" and {h.client for h in hits} == {"Okafor"}
+    assert hits[0].title == "okafor-1098" and {h.client for h in hits} == {"Okafor"}
     assert hits[0].similarity is not None and hits[0].similarity > 0.3
     assert [h.title for h in search(library, "wages", tax_year=2024)] == ["okafor-w2"]
     assert [h.title for h in search(library, "interest", document_type="1098", client="Patel")] == ["patel-1098"]
@@ -454,6 +459,7 @@ def test_assistant_dispatches_registered_tools_and_lists_the_calls(tmp_path):
     response = asyncio.run(assistant.reply(ChatRequest(messages=[ChatMessage(role="user", content="Pending?")]), "1"))
     assert [c.name for c in response.tool_calls] == ["list_documents", "nope"] and response.sources == []
     assert {t["function"]["name"] for t in chat.requests[0]["tools"]} == {
-        "search_documents", "list_documents", "get_document", "classify_document", "extract_document"}
+        "search_documents", "browse_knowledge", "read_document", "list_documents", "get_document",
+        "classify_document", "extract_document"}
     assert chat.requests[1]["messages"][-1]["content"].startswith("1 document(s) match")
     assert chat.requests[2]["messages"][-1]["content"] == "error: unknown tool 'nope'"

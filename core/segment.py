@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from itertools import pairwise
 
 from core.forms import FORMS
 from core.layout import Block, lines_of
@@ -95,7 +96,8 @@ _PATTERNS = _patterns()
 
 
 def _ocr_fixes(text: str) -> str:
-    """Undo common OCR joins: 'Form1099-DIV' -> 'Form 1099-DIV', '1099-MISCMiscellaneous' -> '1099-MISC Miscellaneous'."""
+    """Undo common OCR joins: 'Form1099-DIV' -> 'Form 1099-DIV',
+    '1099-MISCMiscellaneous' -> '1099-MISC Miscellaneous'."""
     text = re.sub(r"([A-Z])([A-Z][a-z])", r"\1 \2", text)
     return re.sub(r"(?i)\b(form|schedule)(?=[0-9A-Z])", r"\1 ", text)
 
@@ -123,7 +125,7 @@ def find_headings(blocks: list[Block]) -> list[Heading]:
     """
     out = []
     for line in lines_of(blocks):
-        candidates = [(b.text, b) for b in line] + [(f"{a.text} {b.text}", a) for a, b in zip(line, line[1:])]
+        candidates = [(b.text, b) for b in line] + [(f"{a.text} {b.text}", a) for a, b in pairwise(line)]
         for text, block in candidates:
             form_id = _heading(text)
             if form_id:
