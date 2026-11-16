@@ -75,8 +75,9 @@ by `npm run build`, which the API serves.
 | @fontsource-variable/inter | 5.3.0 | OFL-1.1 (SIL Open Font License; Inter © The Inter Project Authors) | Inter font files. OFL allows bundling and redistribution with software; the font may not be sold on its own, and its license text (`node_modules/@fontsource-variable/inter/LICENSE`) goes with it |
 
 Development only (not in `web/dist`): vite 7.3.7, @vitejs/plugin-react 5.2.0,
-vitest 5.0.5, openapi-typescript 7.13.0, @types/react, @types/react-dom,
-@types/node (all MIT); typescript 5.9.3 and @playwright/test 1.63.0
+vitest 5.0.5, openapi-typescript 7.13.0, @testing-library/react 16.3.3,
+@testing-library/dom 10.4.2, @testing-library/user-event 14.6.8, jsdom 30.1.3,
+@types/react, @types/react-dom, @types/node (all MIT); typescript 5.9.3 and @playwright/test 1.63.0
 (Apache-2.0).
 
 ## Model weights
