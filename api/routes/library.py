@@ -6,32 +6,54 @@ Each API key sees the documents it uploaded; admin keys see all of them.
 from __future__ import annotations
 
 import hashlib
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 
-from api.deps import (MB, ClientDep, LibraryDep, PipelineDep, RateLimit, SettingsDep, job_slot, owner_scope,
-                      read_upload, require_api_key)
+from api.deps import (
+    MB,
+    ClientDep,
+    LibraryDep,
+    PipelineDep,
+    RateLimit,
+    SettingsDep,
+    job_slot,
+    owner_scope,
+    read_upload,
+    require_api_key,
+)
 from api.errors import responses
 from core.schema import Envelope
 from library.files import MAX_WIDTH
 from library.ingest import read_file
-from library.schema import (DocumentDetail, DocumentFilters, DocumentList, LibraryStats, ReviewStatus, SearchRequest,
-                            SearchResponse)
+from library.schema import (
+    WORKSPACE_PREFIX,
+    DocumentDetail,
+    DocumentFilters,
+    DocumentList,
+    LibraryStats,
+    Origin,
+    ReviewStatus,
+    SearchRequest,
+    SearchResponse,
+)
 
 router = APIRouter(prefix="/v1/library", tags=["Library"], dependencies=[Depends(require_api_key)],
                    responses=responses(401, 429))
 
 
-def _filters(client: Optional[str] = Query(None, max_length=200),
-             tax_year: Optional[int] = Query(None, ge=1900, le=2100),
-             document_type: Optional[str] = Query(None, description="Form id, or `text`."),
-             review_status: Optional[ReviewStatus] = Query(
+def _filters(client: str | None = Query(None, max_length=200),
+             tax_year: int | None = Query(None, ge=1900, le=2100),
+             document_type: str | None = Query(None, description="Form id, or `text`."),
+             review_status: ReviewStatus | None = Query(
                  None, description="pending: any form awaits approval; approved: every extracted form is approved."),
-             q: Optional[str] = Query(None, max_length=200, description="Text in the title or client name.")
+             q: str | None = Query(None, max_length=200, description="Text in the title or client name."),
+             origin: Origin | None = Query(
+                 "upload", description="upload: uploaded files (default); workspace: the workspace's own index "
+                                       "records (profile, discovery answers, notes)."),
              ) -> DocumentFilters:
     return DocumentFilters(client=client, tax_year=tax_year, document_type=document_type,
-                           review_status=review_status, q=q)
+                           review_status=review_status, q=q, origin=origin)
 
 
 FiltersDep = Annotated[DocumentFilters, Depends(_filters)]
@@ -52,10 +74,10 @@ async def add_document(
     pipeline: PipelineDep,
     settings: SettingsDep,
     file: Annotated[UploadFile, File(description="PDF, image, .txt, .md, .csv or .xlsx")],
-    client: Annotated[Optional[str], Form(max_length=200, description="Client the document belongs to.")] = None,
-    tax_year: Annotated[Optional[int], Form(ge=1900, le=2100, description="Used when the content has none.")] = None,
-    title: Annotated[Optional[str], Form(max_length=500, description="Default: the file name.")] = None,
-    location: Annotated[Optional[str], Form(max_length=1000, description="Where the original is kept.")] = None,
+    client: Annotated[str | None, Form(max_length=200, description="Client the document belongs to.")] = None,
+    tax_year: Annotated[int | None, Form(ge=1900, le=2100, description="Used when the content has none.")] = None,
+    title: Annotated[str | None, Form(max_length=500, description="Default: the file name.")] = None,
+    location: Annotated[str | None, Form(max_length=1000, description="Where the original is kept.")] = None,
     extract: Annotated[bool, Form(description="PDFs and images: extract tax forms (slower, structured).")] = True,
 ) -> Envelope[DocumentDetail]:
     """
@@ -65,11 +87,15 @@ async def add_document(
     text. SSNs are masked in the search chunks. The same file uploaded again
     returns the stored document with 200 instead of 201.
     """
+    filename = file.filename or "upload"
+    if (location or filename).startswith(WORKSPACE_PREFIX):  # the location defaults to the file name
+        raise HTTPException(400, f"A location or file name may not start with {WORKSPACE_PREFIX} "
+                                 "(the workspace's own records).")
     data = await read_upload(file, settings.max_upload_mb * MB)
     owner = str(key.id)
     existing = library.find(owner, hashlib.sha256(data).hexdigest())
     if existing is None:
-        draft = await read_file(pipeline, data, file.filename or "upload", chunk_chars=library.config.chunk_chars,
+        draft = await read_file(pipeline, data, filename, chunk_chars=library.config.chunk_chars,
                                 extract=extract, title=title, location=location, client=client, tax_year=tax_year)
         existing, created = await library.add(draft, owner, data)
     else:

@@ -17,7 +17,7 @@ async def health(pipeline: PipelineDep) -> Envelope[HealthResponse]:
     ok = pipeline.parser.loaded and reachable and all(m.available for m in models)
     return Envelope(
         data=HealthResponse(
-            status="ok" if ok else "degraded", 
+            status="ok" if ok else "degraded",
             docling_loaded=pipeline.parser.loaded,
             ollama_reachable=reachable, models=models
         )

@@ -17,11 +17,20 @@ middleware, error handlers and routers. Routes live in `api/routes/`.
     PUT|DELETE /v1/library/forms/{id}/reviews/{field}, POST .../approve | .../reopen   review
     POST /v1/library/search           filtered semantic + keyword search
     POST /v1/assistant/chat           questions answered from the library, with read-only tools
+    GET  /v1/workspace, POST /v1/workspace/hints     workspace summary, contextual hints
+    GET|PUT /v1/business/profile, GET /v1/business/interview, POST .../interview/answers   profile, interview
+    POST /v1/partner/chat             the business partner (interview, organize, recommend, draft assistants)
+    GET|PUT /v1/business/documents[/{id}], GET|POST /v1/business/notes   organized documents, notes board
+    /v1/assistants[...]               assistant specs, status, context preview, runs
+    GET /v1/approvals, POST /v1/approvals/{id}/decision   the approvals queue
+    /v1/connectors[...]               connector store (MCP servers and built-in apps), installs, tools, OAuth
+    /v1/databases/{id}[...]           tables, rows and SQL of a workspace database (a built-in connector)
+    GET /v1/knowledge, GET .../{id}/passages, POST .../search   the whole index, browsable and searchable
     GET  /*                           the dashboard (web/dist), when built
 
 *Usage:*
 >>> app = create_app()                      # uvicorn main:app
->>> app = create_app(settings, pipeline=fake, load_models=False)   # tests
+>>> app = create_app(settings, pipeline=fake, load_models=False, business=business)   # tests
 """
 
 from __future__ import annotations
@@ -42,8 +51,17 @@ from agent.config import load_config
 from api import errors
 from api.deps import MB, BodyLimit, RateWindows
 from api.routes import assistant as assistant_routes
-from api.routes import documents, keys, library as library_routes, reviews, system
+from api.routes import assistants as assistants_routes
+from api.routes import business as business_routes
+from api.routes import connectors as connectors_routes
+from api.routes import databases as databases_routes
+from api.routes import documents, keys, reviews, system
+from api.routes import knowledge as knowledge_routes
+from api.routes import library as library_routes
 from api.web import mount_dashboard
+from business.config import load_business_config
+from business.connectors import ConnectorHub
+from business.service import Business
 from core.config import PROJECT_ROOT, Settings, get_settings
 from core.db import db, init_db
 from core.jobs import JobGate
@@ -68,15 +86,24 @@ def create_app(
     dispose_db_on_shutdown: bool = True,
     assistant: tuple[Library, Assistant] | None = None,
     web_dist: Path | None = WEB_DIST,
+    business: Business | None = None,
 ) -> FastAPI:
     """
     `assistant`: (library, assistant) to use instead of building them from
-    `settings.assistant_config`. `web_dist`: the built dashboard, served at `/`
-    when it has an `index.html` (otherwise `/` redirects to `/docs`).
+    `settings.assistant_config`. `business`: the workspace (its `hub` serves the
+    connector routes) instead of building both from the same file's
+    `business` section (the workspace shares the library and the chat model). `web_dist`: the
+    built dashboard, served at `/` when it has an `index.html` (otherwise `/`
+    redirects to `/docs`).
     """
     settings = settings or get_settings()
     pipeline = pipeline or TaxDocumentPipeline(settings)
     library, assistant_ = assistant or agent.build(load_config(settings.assistant_config))
+    if business is None:
+        config = load_business_config(settings.assistant_config)
+        # No secrets key in the environment: the hub generates one in `key_file` the first time it stores a token.
+        hub = ConnectorHub(config.database, config.secrets_key(), config.public_url, key_file=config.key_file)
+        business = Business(config, library, assistant_.chat, hub)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -94,7 +121,9 @@ def create_app(
         title=settings.app_name,
         version="2.0.0",
         lifespan=lifespan,
-        description="Identify US tax forms and extract their fields into validated JSON.\n\n" + DISCLAIMER,
+        description="A business workspace: a partner that learns the business from the owner and its documents, "
+                    "a searchable knowledge index, role assistants, and connectors they act through. Includes "
+                    "extraction of US tax forms into validated JSON.\n\n" + DISCLAIMER,
     )
     app.state.settings = settings
     app.state.pipeline = pipeline
@@ -102,6 +131,8 @@ def create_app(
     app.state.jobs = JobGate(settings.max_concurrent_jobs, settings.max_queued_jobs)
     app.state.library = library
     app.state.assistant = assistant_
+    app.state.business = business
+    app.state.connectors = business.hub
     app.add_middleware(BodyLimit, settings=settings)
 
     @app.middleware("http")
@@ -133,6 +164,11 @@ def create_app(
     app.include_router(library_routes.router)
     app.include_router(reviews.router)
     app.include_router(assistant_routes.router)
+    app.include_router(business_routes.router)
+    app.include_router(assistants_routes.router)
+    app.include_router(connectors_routes.router)
+    app.include_router(databases_routes.router)
+    app.include_router(knowledge_routes.router)
 
     if web_dist is not None and (web_dist / "index.html").is_file():
         mount_dashboard(app, web_dist)  # last: only paths no API route matched

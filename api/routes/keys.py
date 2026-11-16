@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import threading
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Security
 
@@ -21,10 +20,11 @@ def _info(record: ApiKey) -> ApiKeyInfo:
     return ApiKeyInfo(**record.model_dump(exclude={"key_hash"}))
 
 
-@router.post("", response_model=Envelope[ApiKeyCreated], status_code=201, dependencies=[Depends(RateLimit("keys", calls=10, seconds=60))])
+@router.post("", response_model=Envelope[ApiKeyCreated], status_code=201,
+             dependencies=[Depends(RateLimit("keys", calls=10, seconds=60))])
 def create_key(
     data: ApiKeyCreate, settings: SettingsDep,
-    raw_key: Optional[str] = Security(api_key_header)
+    raw_key: str | None = Security(api_key_header)
 ) -> Envelope[ApiKeyCreated]:
     """
     Create an API key (admin only). When `ALLOW_KEY_BOOTSTRAP=true` and no keys

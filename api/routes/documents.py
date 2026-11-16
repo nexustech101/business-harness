@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import enum
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 
@@ -13,8 +13,8 @@ from core.forms import FORMS
 from core.schema import BulkExtractResponse, ClassifyResponse, DocumentType, Envelope, ExtractResponse
 
 router = APIRouter(
-    prefix="/v1", 
-    tags=["Documents"], 
+    prefix="/v1",
+    tags=["Documents"],
     dependencies=[Depends(require_api_key)],
     responses=responses(401, 429)
 )
@@ -35,7 +35,7 @@ async def extract_document(
     pipeline: PipelineDep,
     settings: SettingsDep,
     file: Annotated[UploadFile, File(description=FILE_TYPES)],
-    document_type: Annotated[Optional[DocumentTypeId], Query(
+    document_type: Annotated[DocumentTypeId | None, Query(
         description="Skip classification: treat the whole file as this form."
     )] = None,
 ) -> Envelope[ExtractResponse]:
@@ -102,8 +102,8 @@ async def classify_document(
     request: Request,
     pipeline: PipelineDep,
     settings: SettingsDep,
-    file: Annotated[Optional[UploadFile], File(description="Document to classify")] = None,
-    text: Annotated[Optional[str], Form(max_length=100_000, description="Or: the document's text")] = None,
+    file: Annotated[UploadFile | None, File(description="Document to classify")] = None,
+    text: Annotated[str | None, Form(max_length=100_000, description="Or: the document's text")] = None,
 ) -> Envelope[ClassifyResponse]:
     """
     Send either `file` (digital PDFs use their text layer; scans are OCR'd) or

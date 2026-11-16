@@ -11,12 +11,15 @@ import math
 import threading
 import time
 from collections import defaultdict, deque
-from typing import Annotated, AsyncIterator, Optional
+from collections.abc import AsyncIterator
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Security, UploadFile
 from fastapi.security import APIKeyHeader
 
 from agent.agent import Assistant
+from business.connectors import ConnectorHub
+from business.service import Business
 from core.auth import find_active_key, hash_key
 from core.config import Settings
 from core.jobs import JobGate
@@ -31,7 +34,7 @@ MB = 1024 * 1024
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
-def require_api_key(api_key: Optional[str] = Security(api_key_header)) -> ApiKey:
+def require_api_key(api_key: str | None = Security(api_key_header)) -> ApiKey:
     record = find_active_key(api_key) if api_key else None
     if record is None:
         raise HTTPException(401, "Missing or invalid API key.", headers={"WWW-Authenticate": "APIKey"})
@@ -70,6 +73,19 @@ def get_jobs(request: Request) -> JobGate:
     return request.app.state.jobs
 
 
+def get_business(request: Request) -> Business:
+    return request.app.state.business
+
+
+def get_connectors(request: Request) -> ConnectorHub:
+    return request.app.state.connectors
+
+
+def business_owner(key: ApiKey) -> str:
+    """Whose business workspace a key works in: its own, admin keys included (a workspace is never shared)."""
+    return str(key.id)
+
+
 def owner_scope(key: ApiKey) -> str | None:
     """Library documents a key may read: its own, or every key's for admin keys (None)."""
     return None if key.is_admin else str(key.id)
@@ -85,6 +101,8 @@ SettingsDep = Annotated[Settings, Depends(get_settings)]
 LibraryDep = Annotated[Library, Depends(get_library)]
 AssistantDep = Annotated[Assistant, Depends(get_assistant)]
 JobsDep = Annotated[JobGate, Depends(get_jobs)]
+BusinessDep = Annotated[Business, Depends(get_business)]
+ConnectorsDep = Annotated[ConnectorHub, Depends(get_connectors)]
 
 # --- Rate limits -------------------------------------------------------------
 

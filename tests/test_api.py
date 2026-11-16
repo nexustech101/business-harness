@@ -274,20 +274,24 @@ def test_job_gate_runs_at_most_n_and_queues_the_rest():
     from core.jobs import JobGate
 
     async def scenario():
-        gate, running, peak = JobGate(running=2, queued=1), 0, 0
+        gate, running, peak, release = JobGate(running=2, queued=1), 0, 0, asyncio.Event()
 
         async def job():
             nonlocal running, peak
             async with gate.slot():
                 running += 1
                 peak = max(peak, running)
-                await asyncio.sleep(0.01)
+                await release.wait()
                 running -= 1
 
-        results = await asyncio.gather(*(job() for _ in range(4)), return_exceptions=True)
-        return peak, [type(r).__name__ for r in results]
+        tasks = [asyncio.create_task(job()) for _ in range(4)]
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)  # only the refused job can finish first
+        at_refusal = running, gate.held
+        release.set()
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return at_refusal, peak, [type(r).__name__ for r in results], gate.held
 
-    peak, results = asyncio.run(scenario())
-    assert peak == 2
-    assert results.count("Busy") == 1  # 2 running + 1 queued; the 4th is refused
+    at_refusal, peak, results, held = asyncio.run(scenario())
+    assert at_refusal == (2, 3)  # 2 running + 1 queued when the 4th is refused
+    assert peak == 2 and results.count("Busy") == 1 and held == 0
 
