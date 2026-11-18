@@ -2,6 +2,8 @@
 
 FastAPI service and dashboard for an AI business partner. The owner uploads business documents and describes the business; the partner reads the documents, then interviews the owner from a first-principles question bank (identity, offering, customers, revenue, operations, departments, roles, finance, sales, tools, data, information flow, compliance, goals), keeps a business profile, organizes uploaded documents into it, recommends MCP connectors for the software the business uses, and drafts role assistants (accountant, marketer, ...) as plain JSON specs. Assistants share engineered context (deterministic layers with budgets), act through connectors, and run read-only tool calls freely while writes follow a per-assistant policy (`auto`, `ask` → approvals queue, `deny`). Everything the workspace knows (uploaded files, the business profile, the owner's discovery answers, notes) is kept in one vector index that can be searched and browsed source by source, so rarely used material stays discoverable. Models run locally on Ollama by default; cloud providers are opt-in.
 
+![Dashboard demo: the partner reads uploaded documents, interviews the owner, fills the business profile and drafts a bookkeeper assistant; then documents with cited answers, knowledge search, assistants, plugins and a workspace database](docs/assets/demo.gif)
+
 Answers, drafts and actions come from language models: check them against the source before relying on them. See [DISCLAIMER.md](DISCLAIMER.md) and [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 ## Features
