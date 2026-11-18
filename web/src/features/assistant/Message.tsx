@@ -2,7 +2,6 @@ import { Check, ChevronRight, CircleAlert, Copy, RotateCcw, Wrench } from "lucid
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import { errorMessage } from "../../api/client";
-import { useTypeName } from "../../api/library";
 import type { ChatResponse, Source } from "../../api/types";
 import { useAssistant, type Turn } from "../../app/assistant";
 import { describeTool } from "./chatUtils";
@@ -181,10 +180,9 @@ function Sources({ text, sources }: { text: string; sources: Source[] }) {
 
 function SourceCard({ source }: { source: Source }) {
   const open = useOpen(source);
-  const typeName = useTypeName();
-  const meta = [source.document_type !== "text" ? typeName(source.document_type) : null, where(source)].filter(Boolean).join(" · ");
+  const meta = where(source);
   return (
-    <button type="button" className={styles.source} onClick={open} title={`${source.title}${source.client ? ` (${source.client})` : ""}`} data-testid="source">
+    <button type="button" className={styles.source} onClick={open} title={source.title} data-testid="source">
       <span className={`${styles.sourceN} num`}>{source.n}</span>
       <span className={styles.sourceText}>
         <span className={`${styles.sourceTitle} truncate`}>{source.title}</span>
@@ -194,7 +192,7 @@ function SourceCard({ source }: { source: Source }) {
   );
 }
 
-/** "Searched “wages” · Read w2", expandable to each call with its arguments. */
+/** "Searched “refunds” · Read handbook", expandable to each call with its arguments. */
 function ToolActivity({ calls, titles }: { calls: ChatResponse["tool_calls"]; titles: Map<string, string> }) {
   if (!calls.length) return <span className={styles.spacer} />;
   return (

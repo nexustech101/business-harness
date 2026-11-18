@@ -1,6 +1,6 @@
 import { AlertTriangle, CircleAlert, Info } from "lucide-react";
 import type { ReactNode } from "react";
-import type { Tone } from "../lib/flags";
+import type { Tone } from "../lib/tone";
 import styles from "./Alert.module.css";
 
 type Props = { tone?: Extract<Tone, "danger" | "warning" | "info">; title?: ReactNode; children?: ReactNode; action?: ReactNode };

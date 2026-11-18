@@ -214,7 +214,7 @@ function CreateKeyDialog({ open, onClose }: { open: boolean; onClose: () => void
     >
       <form id="create-key" className={styles.form} onSubmit={submit}>
         {create.isError && <Alert>{errorMessage(create.error)}</Alert>}
-        <Field label="Name" hint="Who or what uses it, e.g. a reviewer or the n8n workflow.">
+        <Field label="Name" hint="Who or what uses it, e.g. the bookkeeper or a nightly sync script.">
           <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={100} autoFocus required />
         </Field>
         <Field label="Expires after (days)" hint="Empty: never expires.">

@@ -1,7 +1,7 @@
 /**
  * Renders the signed-in dashboard (providers, router, shell) at `path` on the fake API (`api.ts`). `routes`
  * answers `"<METHOD> <path>"` (return undefined to fall through); the defaults cover what the shell loads: the
- * key, the workspace summary, hints (none), assistants (none), the interview, document types and an empty knowledge index. Every other
+ * key, the workspace summary, hints (none), assistants (none), the interview and an empty knowledge index. Every other
  * request answers 404. `requests` lists every request with its parsed JSON body.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -25,7 +25,6 @@ const DEFAULTS: Record<string, () => Response> = {
   "POST /v1/workspace/hints": () => json(200, { data: { hints: [] } }),
   "GET /v1/assistants": () => json(200, { data: [] }),
   "GET /v1/business/interview": () => json(200, { data: workspace().interview }),
-  "GET /v1/document-types": () => json(200, { data: [] }),
   "GET /v1/knowledge": () => json(200, { data: { sources: 0, passages: 0, never_retrieved: 0, count: 0, items: [] } }),
 };
 

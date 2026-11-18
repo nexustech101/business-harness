@@ -28,14 +28,14 @@ function Gate() {
   if (!me) return <SignIn />;
   return (
     <p>
-      Signed in as {me.name} <button onClick={() => void api.GET("/v1/library/stats")}>Load stats</button>
+      Signed in as {me.name} <button onClick={() => void api.GET("/v1/workspace")}>Load workspace</button>
     </p>
   );
 }
 
 function renderApp() {
   const queryClient = new QueryClient();
-  queryClient.setQueryData(["stats"], { documents: 1 });
+  queryClient.setQueryData(["workspace"], { documents: 1 });
   render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider fallback={<p>Checking key</p>}>
@@ -72,7 +72,7 @@ it("signs in, sends the key, and a later 401 signs out with a notice", async () 
   expect(localStorage.getItem("tda.key")).toBe(GOOD);
 
   state.revoked = true;
-  await user.click(screen.getByRole("button", { name: "Load stats" }));
+  await user.click(screen.getByRole("button", { name: "Load workspace" }));
   await screen.findByText("Your key is no longer valid. Sign in again.");
   expect(state.keys).toEqual([GOOD, GOOD]);
   expect(localStorage.getItem("tda.key")).toBeNull();

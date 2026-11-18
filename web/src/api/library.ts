@@ -1,23 +1,20 @@
-/** Documents, stats, page images and form types: one thin hook per resource. */
+/** Documents, their page images and original files: one thin hook per resource. */
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { api, ok, unwrap } from "./client";
-import type { DocumentFilters } from "./types";
 
-/** Pages are always rendered at this width (px), so the viewer and every crop share one cached image. */
+/** Pages are always rendered at this width (px), so every view of a page shares one cached image. */
 export const PAGE_WIDTH = 1600;
 
 export const keys = {
   documents: ["documents"] as const,
   document: (id: string) => ["documents", id] as const,
-  stats: ["stats"] as const,
-  types: ["document-types"] as const,
-  form: (id: string) => ["forms", id] as const,
   page: (id: string, page: number) => ["pages", id, page, PAGE_WIDTH] as const,
 };
 
-export type ListParams = DocumentFilters & { limit?: number; offset?: number; order?: "newest" | "oldest" };
+export type ListParams = { q?: string; limit?: number; offset?: number; order?: "newest" | "oldest" };
 
+/** Uploaded documents, newest first (the workspace's own index records are on the Knowledge page). */
 export function useDocuments(params: ListParams) {
   return useQuery({
     queryKey: [...keys.documents, "list", params],
@@ -34,51 +31,18 @@ export function useDocument(id: string) {
   });
 }
 
-export function useStats(filters: DocumentFilters = {}) {
-  return useQuery({
-    queryKey: [...keys.stats, filters],
-    queryFn: () => unwrap(api.GET("/v1/library/stats", { params: { query: filters } })),
-  });
-}
-
-/** Supported forms; `name` is the short display name (W-2, 1099-NEC). Fetched once per session. */
-export function useDocumentTypes() {
-  return useQuery({
-    queryKey: keys.types,
-    queryFn: () => unwrap(api.GET("/v1/document-types")),
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
-}
-
-/** Form id -> short name; unknown ids (e.g. `text`, `unknown`) map to themselves. */
-export function useTypeName(): (id: string) => string {
-  const { data } = useDocumentTypes();
-  return useMemo(() => {
-    const names = new Map((data ?? []).map((t) => [t.id, t.name]));
-    names.set("text", "Text");
-    names.set("unknown", "Unidentified");
-    return (id: string) => names.get(id) ?? id;
-  }, [data]);
-}
-
-/** `extract: false` stores the file for search only (no tax-form extraction); the API's default is `true`. */
-export type UploadFields = { client?: string; tax_year?: number; extract?: boolean };
-
+/** Stores a file and indexes its text; the same file again returns the stored document. */
 export function useUploadDocument() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ file, client, tax_year, extract = true }: UploadFields & { file: File }) =>
+    mutationFn: (file: File) =>
       unwrap(
         api.POST("/v1/library/documents", {
           // `file` is binary in the schema (typed as string); the serializer sends the File itself.
-          body: { file: file as unknown as string, client, tax_year, extract },
-          bodySerializer(body) {
+          body: { file: file as unknown as string },
+          bodySerializer() {
             const form = new FormData();
             form.set("file", file, file.name);
-            if (body.client) form.set("client", body.client);
-            if (body.tax_year) form.set("tax_year", String(body.tax_year));
-            if (!extract) form.set("extract", "false");
             return form;
           },
         }),
@@ -102,8 +66,8 @@ export function useDeleteDocument() {
 export function invalidateLibrary(queryClient: ReturnType<typeof useQueryClient>) {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: keys.documents }),
-    queryClient.invalidateQueries({ queryKey: keys.stats }),
     queryClient.invalidateQueries({ queryKey: ["knowledge"] }), // the index follows the library (api/knowledge.ts)
+    queryClient.invalidateQueries({ queryKey: ["workspace"] }), // document counts on the dashboard
   ]);
 }
 

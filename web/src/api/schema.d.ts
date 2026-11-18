@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Health
-         * @description `ok` when Docling is loaded and Ollama serves both models; otherwise `degraded`.
+         * @description `ok` once the document parser (Docling) is loaded; `degraded` until then.
          */
         get: operations["health_health_get"];
         put?: never;
@@ -83,105 +83,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/documents/extract": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Extract one tax form
-         * @description Upload a file that holds one tax form. The service identifies the form,
-         *     extracts every filled field (names, TINs, addresses, amounts, checkboxes,
-         *     coded boxes, state rows, tables) and validates it against the form's schema.
-         *
-         *     A file with several forms (a stack of scans, a consolidated brokerage
-         *     statement) is refused with `422 multiple_forms`; send it to
-         *     `/v1/documents/extract/bulk`.
-         */
-        post: operations["extract_document_v1_documents_extract_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/documents/extract/bulk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Extract every form in one or more files
-         * @description Upload any number of files (up to `BULK_MAX_FILES`), each holding any
-         *     number of forms. Every form is identified and extracted on its own:
-         *     stacks of scans, multi-copy W-2 pages, and consolidated brokerage
-         *     statements (1099-DIV, 1099-INT, 1099-B ... in one PDF).
-         *
-         *     Per form, `status` is `ok`, `unsupported` (pages that are not a supported
-         *     form; nothing is dropped silently) or `duplicate` (every extracted value
-         *     equals an earlier form in the same file). Pages no text was read from are
-         *     listed in `document.missing_pages`. A file that can't be read is reported
-         *     with `status: failed` and an `error`; the other files are still processed.
-         *     The request body is limited to `BULK_MAX_TOTAL_MB`, counted as it arrives.
-         */
-        post: operations["extract_bulk_v1_documents_extract_bulk_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/documents/classify": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Identify which tax form a document is
-         * @description Send either `file` (digital PDFs use their text layer; scans are OCR'd) or
-         *     `text`, not both. `document_type` is `unknown` when tev1 is not confident
-         *     or picks `none`. Classifies the file as a whole; use the bulk route to
-         *     find every form in a multi-form file.
-         */
-        post: operations["classify_document_v1_documents_classify_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/document-types": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Document Types
-         * @description Supported forms and the JSON schema of each one's `fields` object.
-         */
-        get: operations["document_types_v1_document_types_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/library/documents": {
         parameters: {
             query?: never;
@@ -191,39 +92,19 @@ export interface paths {
         };
         /**
          * List Documents
-         * @description `count` is the total matching the filters. `tax_year` / `document_type` match any of a document's chunks.
+         * @description `count` is the total matching the filters.
          */
         get: operations["list_documents_v1_library_documents_get"];
         put?: never;
         /**
          * Add a document to the library
-         * @description Store a file: the original (for page rendering and download), every form
-         *     found in it (status, fields, flags; extracted forms start `pending`
-         *     review) and its search chunks. Other pages and text files are stored as
-         *     text. SSNs are masked in the search chunks. The same file uploaded again
-         *     returns the stored document with 200 instead of 201.
+         * @description Store a file: the original (for page rendering and download) and its
+         *     searchable passages. PDFs and images are read page by page (OCR where
+         *     there is no text layer); text files by section, paragraph or row. SSNs
+         *     are masked in the passages. The same file uploaded again returns the
+         *     stored document with 200 instead of 201.
          */
         post: operations["add_document_v1_library_documents_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/library/stats": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Stats
-         * @description Counts for the dashboard, over the documents matching the same filters as the document list.
-         */
-        get: operations["stats_v1_library_stats_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -239,14 +120,14 @@ export interface paths {
         };
         /**
          * Get Document
-         * @description Metadata, page sizes (for scaling `ValueSource.box`) and a summary of every form.
+         * @description Metadata and page sizes.
          */
         get: operations["get_document_v1_library_documents__document_id__get"];
         put?: never;
         post?: never;
         /**
          * Delete Document
-         * @description Removes the document, its forms, reviews and chunks, and the original file.
+         * @description Removes the document, its passages and the original file.
          */
         delete: operations["delete_document_v1_library_documents__document_id__delete"];
         options?: never;
@@ -263,9 +144,7 @@ export interface paths {
         };
         /**
          * Render one page as PNG
-         * @description PDFs are rendered at `width` pixels; images are scaled to it. Overlay a
-         *     `ValueSource.box` by multiplying its coordinates by `width / 1000`.
-         *     Cached by ETag (file hash, page, width).
+         * @description PDFs are rendered at `width` pixels; images are scaled to it. Cached by ETag (file hash, page, width).
          */
         get: operations["page_image_v1_library_documents__document_id__pages__page__get"];
         put?: never;
@@ -304,102 +183,11 @@ export interface paths {
         put?: never;
         /**
          * Search the library
-         * @description The same search the assistant runs: filters first (in the database), then
+         * @description The same search the assistants run: filters first (in the database), then
          *     ranking by meaning and by keywords. `similarity` is the cosine similarity
          *     to the query (null when a hit matched on keywords only).
          */
         post: operations["search_v1_library_search_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/library/forms/{form_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Form
-         * @description The form as a flat list of `checks` (every field in schema order, with its
-         *     value, source box, flags and review), form-level `flags`, progress
-         *     (`checked` / `total`, `open_flags`) and `corrected_fields`.
-         */
-        get: operations["get_form_v1_library_forms__form_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/library/forms/{form_id}/reviews/{field}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /**
-         * Set Review
-         * @description Record `confirmed`, `corrected` (with `value`, parsed like extracted
-         *     values; `422 invalid_value` when it does not parse) or `rejected` for one
-         *     field path (e.g. `box12[0].amount`). Replaces an earlier decision, and
-         *     reopens an approved form. A change of value rebuilds the form's search
-         *     chunks, so the assistant answers from reviewed values.
-         */
-        put: operations["set_review_v1_library_forms__form_id__reviews__field__put"];
-        post?: never;
-        /**
-         * Clear Review
-         * @description Remove the decision on one field (reopens an approved form).
-         */
-        delete: operations["clear_review_v1_library_forms__form_id__reviews__field__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/library/forms/{form_id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Approve
-         * @description Mark the form reviewed. Every flagged field needs a decision first:
-         *     otherwise `409 review_incomplete` with `details.undecided` (the field paths).
-         */
-        post: operations["approve_v1_library_forms__form_id__approve_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/library/forms/{form_id}/reopen": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reopen
-         * @description Set an approved form back to `pending`. Decisions are kept.
-         */
-        post: operations["reopen_v1_library_forms__form_id__reopen_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -418,9 +206,9 @@ export interface paths {
         /**
          * Ask the assistant about stored documents
          * @description Stateless: send the conversation so far, oldest first, ending with the
-         *     user's message. The assistant uses read-only tools (search, list and read
-         *     documents, classify or re-extract a stored file) on the documents this key
-         *     may read, within `scope`, then answers citing search excerpts as [n].
+         *     user's message. The assistant uses read-only tools (search, browse, read
+         *     and list documents) on the documents this key may read, within `scope`,
+         *     then answers citing excerpts as [n].
          *     `sources` lists every excerpt it retrieved under those numbers;
          *     `tool_calls` lists the tools it ran. The workspace's own records
          *     (business profile, discovery answers, notes) are part of what it searches.
@@ -1114,19 +902,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** Address */
-        Address: {
-            /** Street */
-            street?: string | null;
-            /** City */
-            city?: string | null;
-            /** State */
-            state?: string | null;
-            /** Postal Code */
-            postal_code?: string | null;
-            /** Country */
-            country?: string | null;
-        };
         /** AnswerRequest */
         AnswerRequest: {
             /** Question Id */
@@ -1383,16 +1158,6 @@ export interface components {
              */
             file: string;
             /**
-             * Client
-             * @description Client the document belongs to.
-             */
-            client?: string | null;
-            /**
-             * Tax Year
-             * @description Used when the content has none.
-             */
-            tax_year?: number | null;
-            /**
              * Title
              * @description Default: the file name.
              */
@@ -1402,41 +1167,6 @@ export interface components {
              * @description Where the original is kept.
              */
             location?: string | null;
-            /**
-             * Extract
-             * @description PDFs and images: extract tax forms (slower, structured).
-             * @default true
-             */
-            extract: boolean;
-        };
-        /** Body_classify_document_v1_documents_classify_post */
-        Body_classify_document_v1_documents_classify_post: {
-            /**
-             * File
-             * @description Document to classify
-             */
-            file?: string | null;
-            /**
-             * Text
-             * @description Or: the document's text
-             */
-            text?: string | null;
-        };
-        /** Body_extract_bulk_v1_documents_extract_bulk_post */
-        Body_extract_bulk_v1_documents_extract_bulk_post: {
-            /**
-             * Files
-             * @description One or more files (PDF, PNG, JPEG, TIFF, BMP or WEBP)
-             */
-            files: string[];
-        };
-        /** Body_extract_document_v1_documents_extract_post */
-        Body_extract_document_v1_documents_extract_post: {
-            /**
-             * File
-             * @description PDF, PNG, JPEG, TIFF, BMP or WEBP
-             */
-            file: string;
         };
         /** Body_import_table_v1_databases__connector_id__tables_import_post */
         Body_import_table_v1_databases__connector_id__tables_import_post: {
@@ -1450,117 +1180,6 @@ export interface components {
              * @description UTF-8 CSV with a header row.
              */
             file: string;
-        };
-        /**
-         * BrokerTransaction
-         * @description One sale on a 1099-B (boxes 1a-1g, plus the reporting category of its section).
-         */
-        BrokerTransaction: {
-            /**
-             * Description
-             * @description Description of property
-             */
-            description?: string | null;
-            /**
-             * Cusip
-             * @description CUSIP number
-             */
-            cusip?: string | null;
-            /**
-             * Quantity
-             * @description Quantity
-             */
-            quantity?: string | null;
-            /**
-             * Date Acquired
-             * @description Date acquired
-             */
-            date_acquired?: string | "VARIOUS" | null;
-            /**
-             * Date Sold
-             * @description Date sold or disposed
-             */
-            date_sold?: string | null;
-            /**
-             * Proceeds
-             * @description Proceeds
-             */
-            proceeds?: string | null;
-            /**
-             * Cost Basis
-             * @description Cost or other basis
-             */
-            cost_basis?: string | null;
-            /**
-             * Accrued Market Discount
-             * @description Accrued market discount
-             */
-            accrued_market_discount?: string | null;
-            /**
-             * Wash Sale Loss Disallowed
-             * @description Wash sale loss disallowed
-             */
-            wash_sale_loss_disallowed?: string | null;
-            /**
-             * Gain Or Loss
-             * @description Gain or loss
-             */
-            gain_or_loss?: string | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * Term
-             * @description Box 2: Short-term gain or loss / Long-term gain or loss / Ordinary
-             */
-            term?: ("short" | "long" | "ordinary") | null;
-            /**
-             * Basis Reported To Irs
-             * @description Box 12: If checked, basis reported to IRS (covered)
-             */
-            basis_reported_to_irs?: boolean | null;
-            /**
-             * Form 8949 Box
-             * @description Applicable checkbox on Form 8949 (A-F)
-             */
-            form_8949_box?: ("A" | "B" | "C" | "D" | "E" | "F") | null;
-        };
-        /** BulkExtractResponse */
-        BulkExtractResponse: {
-            /** Request Id */
-            request_id: string;
-            /** Files */
-            files: components["schemas"]["FileResult"][];
-            summary: components["schemas"]["BulkSummary"];
-            /** Timings Ms */
-            timings_ms: {
-                [key: string]: number;
-            };
-        };
-        /** BulkSummary */
-        BulkSummary: {
-            /** Files */
-            files: number;
-            /** Failed Files */
-            failed_files: number;
-            /**
-             * Forms
-             * @description Forms extracted (status ok).
-             */
-            forms: number;
-            /** Unsupported */
-            unsupported: number;
-            /** Duplicates */
-            duplicates: number;
-            /**
-             * By Type
-             * @description Extracted forms per document type.
-             */
-            by_type: {
-                [key: string]: number;
-            };
         };
         /**
          * BusinessProfile
@@ -1648,7 +1267,7 @@ export interface components {
              * @description The conversation so far, oldest first; the last is the user's.
              */
             messages: components["schemas"]["ChatMessage"][];
-            /** @description Limits every tool the assistant runs (e.g. one client, one document). The model can narrow it, never widen it. */
+            /** @description Limits every tool the assistant runs (e.g. a few documents). The model can narrow it, never widen it. */
             scope?: components["schemas"]["SearchFilters"];
         };
         /** ChatResponse */
@@ -1673,114 +1292,6 @@ export interface components {
             usage?: {
                 [key: string]: unknown;
             };
-        };
-        /**
-         * Check
-         * @description One field of a form, side by side with where it was read.
-         */
-        Check: {
-            /**
-             * Field
-             * @description Field path, e.g. `employee.tin`, `box12[0].amount`: the key of reviews and flags.
-             */
-            field: string;
-            /**
-             * Label
-             * @description The field's label, e.g. 'Box 1: Wages, tips, other compensation'.
-             */
-            label: string;
-            /**
-             * Group
-             * @description Party, row or section the field belongs to, e.g. 'Employee', 'Box 12a-12d: code and amount (e.g. D, DD, W) #1'; null at top level.
-             */
-            group: string | null;
-            /**
-             * Kind
-             * @description Value type for input: money, percent, tin, date, check (checkbox), state (2 letters), year, month, acquired (date or VARIOUS), choice, text.
-             * @enum {string}
-             */
-            kind: "text" | "money" | "percent" | "tin" | "date" | "check" | "state" | "year" | "month" | "acquired" | "choice";
-            /**
-             * Options
-             * @description Allowed values (kind choice).
-             */
-            options?: string[] | null;
-            /**
-             * Value
-             * @description As extracted; null when empty or removed by verification.
-             */
-            value: boolean | number | string | null;
-            /** @description Where the value (or its table row) was read. */
-            source: components["schemas"]["ValueSource"] | null;
-            /** Flags */
-            flags: components["schemas"]["Flag"][];
-            review: components["schemas"]["Review"] | null;
-        };
-        /** ClassificationResult */
-        ClassificationResult: {
-            /**
-             * Document Type
-             * @description Supported form id, or 'unknown'.
-             */
-            document_type: string;
-            /**
-             * Label
-             * @description Human-readable form title.
-             */
-            label?: string | null;
-            /**
-             * Confidence
-             * @description Probability tev assigned to the chosen document type.
-             */
-            confidence: number;
-            /**
-             * Probabilities
-             * @description Probability per option, highest first ('none' = not a supported form).
-             */
-            probabilities: {
-                [key: string]: number;
-            };
-            /** Model */
-            model: string;
-        };
-        /** ClassifyResponse */
-        ClassifyResponse: {
-            /** Request Id */
-            request_id: string;
-            classification: components["schemas"]["ClassificationResult"];
-            /** @description Omitted when text was classified. */
-            document?: components["schemas"]["DocumentInfo"] | null;
-            /** Timings Ms */
-            timings_ms: {
-                [key: string]: number;
-            };
-        };
-        /** ClientStats */
-        ClientStats: {
-            /**
-             * Client
-             * @description null: documents without a client.
-             */
-            client: string | null;
-            /** Documents */
-            documents: number;
-            /** Forms Pending */
-            forms_pending: number;
-            /** Open Flags */
-            open_flags: number;
-        };
-        /** CodedAmount */
-        CodedAmount: {
-            /**
-             * Code
-             * @description Letter code printed next to the amount
-             */
-            code?: string | null;
-            /**
-             * Amount
-             * @description Amount
-             */
-            amount?: string | null;
         };
         /** Column */
         Column: {
@@ -1993,34 +1504,6 @@ export interface components {
             /** Text */
             text: string;
         };
-        /** CoveredIndividual */
-        CoveredIndividual: {
-            /**
-             * Name
-             * @description Covered individual name
-             */
-            name?: string | null;
-            /**
-             * Ssn
-             * @description Covered individual SSN
-             */
-            ssn?: string | null;
-            /**
-             * Date Of Birth
-             * @description Covered individual date of birth
-             */
-            date_of_birth?: string | null;
-            /**
-             * Coverage Start Date
-             * @description Coverage start date
-             */
-            coverage_start_date?: string | null;
-            /**
-             * Coverage Termination Date
-             * @description Coverage termination date
-             */
-            coverage_termination_date?: string | null;
-        };
         /** Department */
         Department: {
             /**
@@ -2040,19 +1523,6 @@ export interface components {
             head?: string | null;
             /** Responsibilities */
             responsibilities?: string[];
-        };
-        /** DescribedAmount */
-        DescribedAmount: {
-            /**
-             * Description
-             * @description Description
-             */
-            description?: string | null;
-            /**
-             * Amount
-             * @description Amount
-             */
-            amount?: string | null;
         };
         /** DocumentDetail */
         DocumentDetail: {
@@ -2075,78 +1545,23 @@ export interface components {
              * @description SHA-256 of the file. Uploading the same file again returns this document.
              */
             content_hash: string;
-            /** Client */
-            client?: string | null;
-            /** Tax Year */
-            tax_year?: number | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Chunks */
-            chunks: number;
             /**
-             * Document Types
-             * @description Form ids found (e.g. w2, 1099_b), plus `text` for other content.
+             * Chunks
+             * @description Indexed passages.
              */
-            document_types: string[];
+            chunks: number;
             /**
              * Page Count
              * @description Pages that can be rendered (0 for text files).
              */
             page_count: number;
-            /**
-             * Review Status
-             * @description pending: a form awaits approval; approved: every extracted form is approved; null: no forms.
-             */
-            review_status: ("pending" | "approved") | null;
-            /** Forms Pending */
-            forms_pending: number;
-            /** Forms Approved */
-            forms_approved: number;
-            /**
-             * Open Flags
-             * @description Flagged fields without a review decision, over all forms.
-             */
-            open_flags: number;
             /** Pages */
             pages: components["schemas"]["PageInfo"][];
-            /**
-             * Forms
-             * @description Every form found in the file, in file order.
-             */
-            forms: components["schemas"]["FormSummary"][];
-        };
-        /** DocumentInfo */
-        DocumentInfo: {
-            /** Filename */
-            filename: string;
-            /** Media Type */
-            media_type: string;
-            /** Sha256 */
-            sha256: string;
-            /** Pages */
-            pages: number;
-            /**
-             * Text Layer
-             * @description False when the document was OCR'd (scan or photo).
-             */
-            text_layer: boolean;
-            /**
-             * Conversion
-             * @description partial: the parser reported errors; see conversion_errors.
-             * @default complete
-             * @enum {string}
-             */
-            conversion: "complete" | "partial";
-            /** Conversion Errors */
-            conversion_errors?: string[];
-            /**
-             * Missing Pages
-             * @description Pages no text was read from: failed, blank or unreadable.
-             */
-            missing_pages?: number[];
         };
         /** DocumentList */
         DocumentList: {
@@ -2158,29 +1573,6 @@ export interface components {
             /** Documents */
             documents: components["schemas"]["LibraryDocument"][];
         };
-        /** DocumentType */
-        DocumentType: {
-            /** Id */
-            id: string;
-            /**
-             * Name
-             * @description Short form name for display, e.g. W-2, 1099-NEC, K-1 (1065).
-             */
-            name: string;
-            /** Title */
-            title: string;
-            /** Description */
-            description: string;
-            /** Json Schema */
-            json_schema: {
-                [key: string]: unknown;
-            };
-        };
-        /**
-         * DocumentTypeId
-         * @enum {string}
-         */
-        DocumentTypeId: "w2" | "1099_nec" | "1099_misc" | "1099_int" | "1099_div" | "1099_b" | "1099_r" | "1099_g" | "1099_k" | "ssa_1099" | "1098" | "1098_t" | "1098_e" | "1095_a" | "k1_1065";
         /** Envelope[ApiKeyCreated] */
         Envelope_ApiKeyCreated_: {
             data: components["schemas"]["ApiKeyCreated"];
@@ -2205,10 +1597,6 @@ export interface components {
         Envelope_AssistantInfo_: {
             data: components["schemas"]["AssistantInfo"];
         };
-        /** Envelope[BulkExtractResponse] */
-        Envelope_BulkExtractResponse_: {
-            data: components["schemas"]["BulkExtractResponse"];
-        };
         /** Envelope[BusinessProfile] */
         Envelope_BusinessProfile_: {
             data: components["schemas"]["BusinessProfile"];
@@ -2216,14 +1604,6 @@ export interface components {
         /** Envelope[ChatResponse] */
         Envelope_ChatResponse_: {
             data: components["schemas"]["ChatResponse"];
-        };
-        /** Envelope[Check] */
-        Envelope_Check_: {
-            data: components["schemas"]["Check"];
-        };
-        /** Envelope[ClassifyResponse] */
-        Envelope_ClassifyResponse_: {
-            data: components["schemas"]["ClassifyResponse"];
         };
         /** Envelope[ConnectorInfo] */
         Envelope_ConnectorInfo_: {
@@ -2236,14 +1616,6 @@ export interface components {
         /** Envelope[DocumentList] */
         Envelope_DocumentList_: {
             data: components["schemas"]["DocumentList"];
-        };
-        /** Envelope[ExtractResponse] */
-        Envelope_ExtractResponse_: {
-            data: components["schemas"]["ExtractResponse"];
-        };
-        /** Envelope[FormDetail] */
-        Envelope_FormDetail_: {
-            data: components["schemas"]["FormDetail"];
         };
         /** Envelope[HealthResponse] */
         Envelope_HealthResponse_: {
@@ -2264,10 +1636,6 @@ export interface components {
         /** Envelope[KnowledgeSearchResponse] */
         Envelope_KnowledgeSearchResponse_: {
             data: components["schemas"]["KnowledgeSearchResponse"];
-        };
-        /** Envelope[LibraryStats] */
-        Envelope_LibraryStats_: {
-            data: components["schemas"]["LibraryStats"];
         };
         /** Envelope[Note] */
         Envelope_Note_: {
@@ -2350,11 +1718,6 @@ export interface components {
             /** Data */
             data: components["schemas"]["ConnectorTool"][];
         };
-        /** Envelope[list[DocumentType]] */
-        Envelope_list_DocumentType__: {
-            /** Data */
-            data: components["schemas"]["DocumentType"][];
-        };
         /** Envelope[list[Note]] */
         Envelope_list_Note__: {
             /** Data */
@@ -2386,41 +1749,6 @@ export interface components {
         /** ErrorResponse */
         ErrorResponse: {
             error: components["schemas"]["ErrorBody"];
-        };
-        /** ExtractResponse */
-        ExtractResponse: {
-            /** Request Id */
-            request_id: string;
-            /** Document Type */
-            document_type: string;
-            /** Form Name */
-            form_name: string;
-            classification: components["schemas"]["ClassificationResult"];
-            /** Fields */
-            fields: components["schemas"]["W2"] | components["schemas"]["Form1099NEC"] | components["schemas"]["Form1099MISC"] | components["schemas"]["Form1099INT"] | components["schemas"]["Form1099DIV"] | components["schemas"]["Form1099B"] | components["schemas"]["Form1099R"] | components["schemas"]["Form1099G"] | components["schemas"]["Form1099K"] | components["schemas"]["SSA1099"] | components["schemas"]["Form1098"] | components["schemas"]["Form1098T"] | components["schemas"]["Form1098E"] | components["schemas"]["Form1095A"] | components["schemas"]["ScheduleK1_1065"];
-            validation: components["schemas"]["ValidationReport"];
-            document: components["schemas"]["DocumentInfo"];
-            /** Extraction Model */
-            extraction_model: string;
-            /** Timings Ms */
-            timings_ms: {
-                [key: string]: number;
-            };
-        };
-        /** FileResult */
-        FileResult: {
-            /** Filename */
-            filename: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "ok" | "failed";
-            /** @description Why the file could not be read (status failed). */
-            error?: components["schemas"]["ErrorBody"] | null;
-            document?: components["schemas"]["DocumentInfo"] | null;
-            /** Forms */
-            forms?: components["schemas"]["FormResult"][];
         };
         /**
          * FileType
@@ -2461,1221 +1789,6 @@ export interface components {
              */
             reporting?: string[];
         };
-        /**
-         * Flag
-         * @description Something a reviewer should check.
-         */
-        Flag: {
-            /**
-             * Field
-             * @description Field path (e.g. `employee.tin`, `box12[0].amount`), as in `sources`; null: the whole form.
-             */
-            field: string | null;
-            /**
-             * Code
-             * @description What kind of problem; see the table in core/flags.py.
-             * @enum {string}
-             */
-            code: "not_printed" | "wrong_label" | "unlabeled" | "unparseable" | "multiple_values" | "text_as_json" | "no_output" | "inconsistent" | "partial_conversion" | "missing_page" | "uncertain_type";
-            /**
-             * Message
-             * @description Human-readable explanation. SSNs in it are masked to the last four digits.
-             */
-            message: string;
-        };
-        /** Form1095A */
-        Form1095A: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Marketplace Identifier
-             * @description Box 1: Marketplace identifier
-             */
-            marketplace_identifier?: string | null;
-            /**
-             * Policy Number
-             * @description Box 2: Marketplace-assigned policy number
-             */
-            policy_number?: string | null;
-            /**
-             * Policy Issuer
-             * @description Box 3: Policy issuer's name
-             */
-            policy_issuer?: string | null;
-            /**
-             * Recipient Name
-             * @description Box 4: Recipient's name
-             */
-            recipient_name?: string | null;
-            /**
-             * Recipient Ssn
-             * @description Box 5: Recipient's SSN
-             */
-            recipient_ssn?: string | null;
-            /**
-             * Recipient Date Of Birth
-             * @description Box 6: Recipient's date of birth
-             */
-            recipient_date_of_birth?: string | null;
-            /**
-             * Spouse Name
-             * @description Box 7: Recipient's spouse's name
-             */
-            spouse_name?: string | null;
-            /**
-             * Spouse Ssn
-             * @description Box 8: Recipient's spouse's SSN
-             */
-            spouse_ssn?: string | null;
-            /**
-             * Spouse Date Of Birth
-             * @description Box 9: Recipient's spouse's date of birth
-             */
-            spouse_date_of_birth?: string | null;
-            /**
-             * Policy Start Date
-             * @description Box 10: Policy start date
-             */
-            policy_start_date?: string | null;
-            /**
-             * Policy Termination Date
-             * @description Box 11: Policy termination date
-             */
-            policy_termination_date?: string | null;
-            /**
-             * Street Address
-             * @description Box 12: Street address (including apartment no.)
-             */
-            street_address?: string | null;
-            /**
-             * City
-             * @description Box 13: City or town
-             */
-            city?: string | null;
-            /**
-             * State
-             * @description Box 14: State or province
-             */
-            state?: string | null;
-            /**
-             * Country And Zip
-             * @description Box 15: Country and ZIP or foreign postal code
-             */
-            country_and_zip?: string | null;
-            /**
-             * Covered Individuals
-             * @description Part II: Covered individuals (lines 16-20)
-             */
-            covered_individuals?: components["schemas"]["CoveredIndividual"][];
-            /**
-             * Monthly
-             * @description Part III: Coverage information by month (lines 21-32)
-             */
-            monthly?: components["schemas"]["MonthlyCoverage"][];
-            /**
-             * Annual Enrollment Premiums
-             * @description Box 33A: Annual Totals: Monthly enrollment premiums
-             */
-            annual_enrollment_premiums?: string | null;
-            /**
-             * Annual Slcsp Premium
-             * @description Box 33B: Annual Totals: Monthly second lowest cost silver plan (SLCSP) premium
-             */
-            annual_slcsp_premium?: string | null;
-            /**
-             * Annual Advance Ptc
-             * @description Box 33C: Annual Totals: Monthly advance payment of premium tax credit
-             */
-            annual_advance_ptc?: string | null;
-        };
-        /** Form1098 */
-        Form1098: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description RECIPIENT'S/LENDER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.; TIN from 'RECIPIENT'S/LENDER'S TIN' */
-            lender?: components["schemas"]["Party"] | null;
-            /** @description PAYER'S/BORROWER'S name, street address (including apt. no.), city or town, state or province, country, and ZIP or foreign postal code; TIN from 'PAYER'S/BORROWER'S TIN' */
-            borrower?: components["schemas"]["Party"] | null;
-            /**
-             * Mortgage Interest Received
-             * @description Box 1: Mortgage interest received from payer(s)/borrower(s)
-             */
-            mortgage_interest_received?: string | null;
-            /**
-             * Outstanding Mortgage Principal
-             * @description Box 2: Outstanding mortgage principal
-             */
-            outstanding_mortgage_principal?: string | null;
-            /**
-             * Mortgage Origination Date
-             * @description Box 3: Mortgage origination date
-             */
-            mortgage_origination_date?: string | null;
-            /**
-             * Refund Of Overpaid Interest
-             * @description Box 4: Refund of overpaid interest
-             */
-            refund_of_overpaid_interest?: string | null;
-            /**
-             * Mortgage Insurance Premiums
-             * @description Box 5: Mortgage insurance premiums
-             */
-            mortgage_insurance_premiums?: string | null;
-            /**
-             * Points Paid On Purchase
-             * @description Box 6: Points paid on purchase of principal residence
-             */
-            points_paid_on_purchase?: string | null;
-            /**
-             * Property Address Same As Borrower
-             * @description Box 7: If address of property securing mortgage is the same as PAYER'S/BORROWER'S address, the box is checked
-             */
-            property_address_same_as_borrower?: boolean | null;
-            /**
-             * Property Address
-             * @description Box 8: Address or description of property securing mortgage
-             */
-            property_address?: string | null;
-            /**
-             * Number Of Properties
-             * @description Box 9: Number of properties securing the mortgage
-             */
-            number_of_properties?: string | null;
-            /**
-             * Other
-             * @description Box 10: Other
-             */
-            other?: string | null;
-            /**
-             * Mortgage Acquisition Date
-             * @description Box 11: Mortgage acquisition date
-             */
-            mortgage_acquisition_date?: string | null;
-        };
-        /** Form1098E */
-        Form1098E: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description RECIPIENT'S/LENDER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone number; TIN from 'RECIPIENT'S TIN' */
-            lender?: components["schemas"]["Party"] | null;
-            /** @description BORROWER'S name, street address (including apt. no.), city or town, state or province, country, and ZIP or foreign postal code; TIN from 'BORROWER'S TIN' */
-            borrower?: components["schemas"]["Party"] | null;
-            /**
-             * Student Loan Interest Received
-             * @description Box 1: Student loan interest received by lender
-             */
-            student_loan_interest_received?: string | null;
-            /**
-             * Excludes Origination Fees Or Capitalized Interest
-             * @description Box 2: If checked, box 1 does not include loan origination fees and/or capitalized interest for loans made before September 1, 2004
-             */
-            excludes_origination_fees_or_capitalized_interest?: boolean | null;
-        };
-        /** Form1098T */
-        Form1098T: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description FILER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone number; TIN from 'FILER'S employer identification no.' */
-            filer?: components["schemas"]["Party"] | null;
-            /** @description STUDENT'S name, street address (including apt. no.), city or town, state or province, country, and ZIP or foreign postal code; TIN from 'STUDENT'S TIN' */
-            student?: components["schemas"]["Party"] | null;
-            /**
-             * Payments Received For Qualified Tuition
-             * @description Box 1: Payments received for qualified tuition and related expenses
-             */
-            payments_received_for_qualified_tuition?: string | null;
-            /**
-             * Adjustments Made For Prior Year
-             * @description Box 4: Adjustments made for a prior year
-             */
-            adjustments_made_for_prior_year?: string | null;
-            /**
-             * Scholarships Or Grants
-             * @description Box 5: Scholarships or grants
-             */
-            scholarships_or_grants?: string | null;
-            /**
-             * Adjustments To Scholarships For Prior Year
-             * @description Box 6: Adjustments to scholarships or grants for a prior year
-             */
-            adjustments_to_scholarships_for_prior_year?: string | null;
-            /**
-             * Includes Amounts For Next Period
-             * @description Box 7: Checked if the amount in box 1 includes amounts for an academic period beginning January-March of next year
-             */
-            includes_amounts_for_next_period?: boolean | null;
-            /**
-             * At Least Half Time Student
-             * @description Box 8: Check if at least half-time student
-             */
-            at_least_half_time_student?: boolean | null;
-            /**
-             * Graduate Student
-             * @description Box 9: Checked if a graduate student
-             */
-            graduate_student?: boolean | null;
-            /**
-             * Insurance Contract Reimbursement
-             * @description Box 10: Ins. contract reimb./refund
-             */
-            insurance_contract_reimbursement?: string | null;
-        };
-        /** Form1099B */
-        Form1099B: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.; TIN from 'PAYER'S TIN' */
-            payer?: components["schemas"]["Party"] | null;
-            /** @description RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code; TIN from 'RECIPIENT'S TIN' */
-            recipient?: components["schemas"]["Party"] | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Box 4: Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * Profit Or Loss On Closed Contracts
-             * @description Box 8: Profit or (loss) realized on closed contracts
-             */
-            profit_or_loss_on_closed_contracts?: string | null;
-            /**
-             * Aggregate Profit Or Loss On Contracts
-             * @description Box 11: Aggregate profit or (loss) on contracts
-             */
-            aggregate_profit_or_loss_on_contracts?: string | null;
-            /**
-             * Bartering
-             * @description Box 13: Bartering
-             */
-            bartering?: string | null;
-            /**
-             * Transactions
-             * @description Boxes 1a-1g: sales, one row per transaction
-             */
-            transactions?: components["schemas"]["BrokerTransaction"][];
-            /**
-             * State Info
-             * @description Boxes 14-16: State name, State identification no., State tax withheld
-             */
-            state_info?: components["schemas"]["StateTaxRow"][];
-        };
-        /** Form1099DIV */
-        Form1099DIV: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.; TIN from 'PAYER'S TIN' */
-            payer?: components["schemas"]["Party"] | null;
-            /** @description RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code; TIN from 'RECIPIENT'S TIN' */
-            recipient?: components["schemas"]["Party"] | null;
-            /**
-             * Total Ordinary Dividends
-             * @description Box 1a: Total ordinary dividends
-             */
-            total_ordinary_dividends?: string | null;
-            /**
-             * Qualified Dividends
-             * @description Box 1b: Qualified dividends
-             */
-            qualified_dividends?: string | null;
-            /**
-             * Total Capital Gain Distributions
-             * @description Box 2a: Total capital gain distr.
-             */
-            total_capital_gain_distributions?: string | null;
-            /**
-             * Unrecaptured Section 1250 Gain
-             * @description Box 2b: Unrecap. Sec. 1250 gain
-             */
-            unrecaptured_section_1250_gain?: string | null;
-            /**
-             * Section 1202 Gain
-             * @description Box 2c: Section 1202 gain
-             */
-            section_1202_gain?: string | null;
-            /**
-             * Collectibles 28 Rate Gain
-             * @description Box 2d: Collectibles (28%) gain
-             */
-            collectibles_28_rate_gain?: string | null;
-            /**
-             * Section 897 Ordinary Dividends
-             * @description Box 2e: Section 897 ordinary dividends
-             */
-            section_897_ordinary_dividends?: string | null;
-            /**
-             * Section 897 Capital Gain
-             * @description Box 2f: Section 897 capital gain
-             */
-            section_897_capital_gain?: string | null;
-            /**
-             * Nondividend Distributions
-             * @description Box 3: Nondividend distributions
-             */
-            nondividend_distributions?: string | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Box 4: Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * Section 199A Dividends
-             * @description Box 5: Section 199A dividends
-             */
-            section_199a_dividends?: string | null;
-            /**
-             * Investment Expenses
-             * @description Box 6: Investment expenses
-             */
-            investment_expenses?: string | null;
-            /**
-             * Foreign Tax Paid
-             * @description Box 7: Foreign tax paid
-             */
-            foreign_tax_paid?: string | null;
-            /**
-             * Foreign Country
-             * @description Box 8: Foreign country or U.S. possession
-             */
-            foreign_country?: string | null;
-            /**
-             * Cash Liquidation Distributions
-             * @description Box 9: Cash liquidation distributions
-             */
-            cash_liquidation_distributions?: string | null;
-            /**
-             * Noncash Liquidation Distributions
-             * @description Box 10: Noncash liquidation distributions
-             */
-            noncash_liquidation_distributions?: string | null;
-            /**
-             * Fatca Filing Requirement
-             * @description Box 11: FATCA filing requirement
-             */
-            fatca_filing_requirement?: boolean | null;
-            /**
-             * Exempt Interest Dividends
-             * @description Box 12: Exempt-interest dividends
-             */
-            exempt_interest_dividends?: string | null;
-            /**
-             * Specified Private Activity Bond Interest Dividends
-             * @description Box 13: Specified private activity bond interest dividends
-             */
-            specified_private_activity_bond_interest_dividends?: string | null;
-            /**
-             * State Info
-             * @description Boxes 14-16: State, State identification no., State tax withheld
-             */
-            state_info?: components["schemas"]["StateTaxRow"][];
-        };
-        /** Form1099G */
-        Form1099G: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.; TIN from 'PAYER'S TIN' */
-            payer?: components["schemas"]["Party"] | null;
-            /** @description RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code; TIN from 'RECIPIENT'S TIN' */
-            recipient?: components["schemas"]["Party"] | null;
-            /**
-             * Unemployment Compensation
-             * @description Box 1: Unemployment compensation
-             */
-            unemployment_compensation?: string | null;
-            /**
-             * State Or Local Income Tax Refunds
-             * @description Box 2: State or local income tax refunds, credits, or offsets
-             */
-            state_or_local_income_tax_refunds?: string | null;
-            /**
-             * Box2 Tax Year
-             * @description Box 3: Box 2 amount is for tax year
-             */
-            box2_tax_year?: number | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Box 4: Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * Rtaa Payments
-             * @description Box 5: RTAA payments
-             */
-            rtaa_payments?: string | null;
-            /**
-             * Taxable Grants
-             * @description Box 6: Taxable grants
-             */
-            taxable_grants?: string | null;
-            /**
-             * Agriculture Payments
-             * @description Box 7: Agriculture payments
-             */
-            agriculture_payments?: string | null;
-            /**
-             * Trade Or Business Income
-             * @description Box 8: If checked, box 2 is trade or business income
-             */
-            trade_or_business_income?: boolean | null;
-            /**
-             * Market Gain
-             * @description Box 9: Market gain
-             */
-            market_gain?: string | null;
-            /**
-             * State Info
-             * @description Boxes 10a-11: State, State identification no., State income tax withheld
-             */
-            state_info?: components["schemas"]["StateTaxRow"][];
-        };
-        /** Form1099INT */
-        Form1099INT: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.; TIN from 'PAYER'S TIN' */
-            payer?: components["schemas"]["Party"] | null;
-            /** @description RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code; TIN from 'RECIPIENT'S TIN' */
-            recipient?: components["schemas"]["Party"] | null;
-            /**
-             * Payer Rtn
-             * @description Payer's RTN (optional)
-             */
-            payer_rtn?: string | null;
-            /**
-             * Interest Income
-             * @description Box 1: Interest income
-             */
-            interest_income?: string | null;
-            /**
-             * Early Withdrawal Penalty
-             * @description Box 2: Early withdrawal penalty
-             */
-            early_withdrawal_penalty?: string | null;
-            /**
-             * Us Savings Bonds And Treasury Interest
-             * @description Box 3: Interest on U.S. Savings Bonds and Treasury obligations
-             */
-            us_savings_bonds_and_treasury_interest?: string | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Box 4: Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * Investment Expenses
-             * @description Box 5: Investment expenses
-             */
-            investment_expenses?: string | null;
-            /**
-             * Foreign Tax Paid
-             * @description Box 6: Foreign tax paid
-             */
-            foreign_tax_paid?: string | null;
-            /**
-             * Foreign Country
-             * @description Box 7: Foreign country or U.S. possession
-             */
-            foreign_country?: string | null;
-            /**
-             * Tax Exempt Interest
-             * @description Box 8: Tax-exempt interest
-             */
-            tax_exempt_interest?: string | null;
-            /**
-             * Specified Private Activity Bond Interest
-             * @description Box 9: Specified private activity bond interest
-             */
-            specified_private_activity_bond_interest?: string | null;
-            /**
-             * Market Discount
-             * @description Box 10: Market discount
-             */
-            market_discount?: string | null;
-            /**
-             * Bond Premium
-             * @description Box 11: Bond premium
-             */
-            bond_premium?: string | null;
-            /**
-             * Bond Premium On Treasury Obligations
-             * @description Box 12: Bond premium on Treasury obligations
-             */
-            bond_premium_on_treasury_obligations?: string | null;
-            /**
-             * Bond Premium On Tax Exempt Bond
-             * @description Box 13: Bond premium on tax-exempt bond
-             */
-            bond_premium_on_tax_exempt_bond?: string | null;
-            /**
-             * Tax Exempt Tax Credit Bond Cusip
-             * @description Box 14: Tax-exempt and tax credit bond CUSIP no.
-             */
-            tax_exempt_tax_credit_bond_cusip?: string | null;
-            /**
-             * Fatca Filing Requirement
-             * @description FATCA filing requirement
-             */
-            fatca_filing_requirement?: boolean | null;
-            /**
-             * State Info
-             * @description Boxes 15-17: State, State identification no., State tax withheld
-             */
-            state_info?: components["schemas"]["StateTaxRow"][];
-        };
-        /** Form1099K */
-        Form1099K: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description FILER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.; TIN from 'FILER'S TIN' */
-            filer?: components["schemas"]["Party"] | null;
-            /** @description PAYEE'S name; TIN from 'PAYEE'S TIN' */
-            payee?: components["schemas"]["Party"] | null;
-            /**
-             * Filer Is Pse
-             * @description Payment settlement entity (PSE)
-             */
-            filer_is_pse?: boolean | null;
-            /**
-             * Filer Is Epf Or Other Third Party
-             * @description Electronic Payment Facilitator (EPF)/Other third party
-             */
-            filer_is_epf_or_other_third_party?: boolean | null;
-            /**
-             * Payment Card Transactions
-             * @description Payment card
-             */
-            payment_card_transactions?: boolean | null;
-            /**
-             * Third Party Network Transactions
-             * @description Third party network
-             */
-            third_party_network_transactions?: boolean | null;
-            /**
-             * Pse Name And Phone
-             * @description PSE'S name and telephone number
-             */
-            pse_name_and_phone?: string | null;
-            /**
-             * Gross Amount
-             * @description Box 1a: Gross amount of payment card/third party network transactions
-             */
-            gross_amount?: string | null;
-            /**
-             * Card Not Present Transactions
-             * @description Box 1b: Card Not Present transactions
-             */
-            card_not_present_transactions?: string | null;
-            /**
-             * Merchant Category Code
-             * @description Box 2: Merchant category code
-             */
-            merchant_category_code?: string | null;
-            /**
-             * Number Of Payment Transactions
-             * @description Box 3: Number of payment transactions
-             */
-            number_of_payment_transactions?: string | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Box 4: Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * January
-             * @description Box 5a: January
-             */
-            january?: string | null;
-            /**
-             * February
-             * @description Box 5b: February
-             */
-            february?: string | null;
-            /**
-             * March
-             * @description Box 5c: March
-             */
-            march?: string | null;
-            /**
-             * April
-             * @description Box 5d: April
-             */
-            april?: string | null;
-            /**
-             * May
-             * @description Box 5e: May
-             */
-            may?: string | null;
-            /**
-             * June
-             * @description Box 5f: June
-             */
-            june?: string | null;
-            /**
-             * July
-             * @description Box 5g: July
-             */
-            july?: string | null;
-            /**
-             * August
-             * @description Box 5h: August
-             */
-            august?: string | null;
-            /**
-             * September
-             * @description Box 5i: September
-             */
-            september?: string | null;
-            /**
-             * October
-             * @description Box 5j: October
-             */
-            october?: string | null;
-            /**
-             * November
-             * @description Box 5k: November
-             */
-            november?: string | null;
-            /**
-             * December
-             * @description Box 5l: December
-             */
-            december?: string | null;
-            /**
-             * State Info
-             * @description Boxes 6-8: State, State identification no., State income tax withheld
-             */
-            state_info?: components["schemas"]["StateTaxRow"][];
-        };
-        /** Form1099MISC */
-        Form1099MISC: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.; TIN from 'PAYER'S TIN' */
-            payer?: components["schemas"]["Party"] | null;
-            /** @description RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code; TIN from 'RECIPIENT'S TIN' */
-            recipient?: components["schemas"]["Party"] | null;
-            /**
-             * Rents
-             * @description Box 1: Rents
-             */
-            rents?: string | null;
-            /**
-             * Royalties
-             * @description Box 2: Royalties
-             */
-            royalties?: string | null;
-            /**
-             * Other Income
-             * @description Box 3: Other income
-             */
-            other_income?: string | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Box 4: Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * Fishing Boat Proceeds
-             * @description Box 5: Fishing boat proceeds
-             */
-            fishing_boat_proceeds?: string | null;
-            /**
-             * Medical And Health Care Payments
-             * @description Box 6: Medical and health care payments
-             */
-            medical_and_health_care_payments?: string | null;
-            /**
-             * Direct Sales 5000 Or More
-             * @description Box 7: Payer made direct sales totaling $5,000 or more of consumer products to recipient for resale
-             */
-            direct_sales_5000_or_more?: boolean | null;
-            /**
-             * Substitute Payments
-             * @description Box 8: Substitute payments in lieu of dividends or interest
-             */
-            substitute_payments?: string | null;
-            /**
-             * Crop Insurance Proceeds
-             * @description Box 9: Crop insurance proceeds
-             */
-            crop_insurance_proceeds?: string | null;
-            /**
-             * Gross Proceeds Paid To Attorney
-             * @description Box 10: Gross proceeds paid to an attorney
-             */
-            gross_proceeds_paid_to_attorney?: string | null;
-            /**
-             * Fish Purchased For Resale
-             * @description Box 11: Fish purchased for resale
-             */
-            fish_purchased_for_resale?: string | null;
-            /**
-             * Section 409A Deferrals
-             * @description Box 12: Section 409A deferrals
-             */
-            section_409a_deferrals?: string | null;
-            /**
-             * Fatca Filing Requirement
-             * @description Box 13: FATCA filing requirement
-             */
-            fatca_filing_requirement?: boolean | null;
-            /**
-             * Excess Golden Parachute Payments
-             * @description Box 14: Excess golden parachute payments
-             */
-            excess_golden_parachute_payments?: string | null;
-            /**
-             * Nonqualified Deferred Compensation
-             * @description Box 15: Nonqualified deferred compensation
-             */
-            nonqualified_deferred_compensation?: string | null;
-            /**
-             * State Info
-             * @description Boxes 16-18: State tax withheld, State/Payer's state no., State income
-             */
-            state_info?: components["schemas"]["StateTaxRow"][];
-        };
-        /** Form1099NEC */
-        Form1099NEC: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.; TIN from 'PAYER'S TIN' */
-            payer?: components["schemas"]["Party"] | null;
-            /** @description RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code; TIN from 'RECIPIENT'S TIN' */
-            recipient?: components["schemas"]["Party"] | null;
-            /**
-             * Second Tin Notice
-             * @description 2nd TIN not.
-             */
-            second_tin_notice?: boolean | null;
-            /**
-             * Nonemployee Compensation
-             * @description Box 1: Nonemployee compensation
-             */
-            nonemployee_compensation?: string | null;
-            /**
-             * Direct Sales 5000 Or More
-             * @description Box 2: Payer made direct sales totaling $5,000 or more of consumer products to recipient for resale
-             */
-            direct_sales_5000_or_more?: boolean | null;
-            /**
-             * Excess Golden Parachute Payments
-             * @description Box 3: Excess golden parachute payments
-             */
-            excess_golden_parachute_payments?: string | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Box 4: Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * State Info
-             * @description Boxes 5-7: State tax withheld, State/Payer's state no., State income
-             */
-            state_info?: components["schemas"]["StateTaxRow"][];
-        };
-        /** Form1099R */
-        Form1099R: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /**
-             * Corrected
-             * @description CORRECTED (if checked)
-             */
-            corrected?: boolean | null;
-            /**
-             * Account Number
-             * @description Account number (see instructions)
-             */
-            account_number?: string | null;
-            /** @description PAYER'S name, street address, city or town, state or province, country, ZIP or foreign postal code, and telephone no.; TIN from 'PAYER'S TIN' */
-            payer?: components["schemas"]["Party"] | null;
-            /** @description RECIPIENT'S name, street address, city or town, state or province, country, and ZIP or foreign postal code; TIN from 'RECIPIENT'S TIN' */
-            recipient?: components["schemas"]["Party"] | null;
-            /**
-             * Gross Distribution
-             * @description Box 1: Gross distribution
-             */
-            gross_distribution?: string | null;
-            /**
-             * Taxable Amount
-             * @description Box 2a: Taxable amount
-             */
-            taxable_amount?: string | null;
-            /**
-             * Taxable Amount Not Determined
-             * @description Box 2b: Taxable amount not determined
-             */
-            taxable_amount_not_determined?: boolean | null;
-            /**
-             * Total Distribution
-             * @description Box 2b: Total distribution
-             */
-            total_distribution?: boolean | null;
-            /**
-             * Capital Gain
-             * @description Box 3: Capital gain (included in box 2a)
-             */
-            capital_gain?: string | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Box 4: Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * Employee Contributions
-             * @description Box 5: Employee contributions/Designated Roth contributions or insurance premiums
-             */
-            employee_contributions?: string | null;
-            /**
-             * Net Unrealized Appreciation
-             * @description Box 6: Net unrealized appreciation in employer's securities
-             */
-            net_unrealized_appreciation?: string | null;
-            /**
-             * Distribution Codes
-             * @description Box 7: Distribution code(s), plain text such as 7 or G4
-             */
-            distribution_codes?: string | null;
-            /**
-             * Ira Sep Simple
-             * @description Box 7: IRA/SEP/SIMPLE
-             */
-            ira_sep_simple?: boolean | null;
-            /**
-             * Other Amount
-             * @description Box 8: Other
-             */
-            other_amount?: string | null;
-            /**
-             * Other Percent
-             * @description Box 8: Other (percentage)
-             */
-            other_percent?: string | null;
-            /**
-             * Percent Of Total Distribution
-             * @description Box 9a: Your percentage of total distribution
-             */
-            percent_of_total_distribution?: string | null;
-            /**
-             * Total Employee Contributions
-             * @description Box 9b: Total employee contributions
-             */
-            total_employee_contributions?: string | null;
-            /**
-             * Amount Allocable To Irr
-             * @description Box 10: Amount allocable to IRR within 5 years
-             */
-            amount_allocable_to_irr?: string | null;
-            /**
-             * First Year Of Designated Roth
-             * @description Box 11: 1st year of desig. Roth contrib.
-             */
-            first_year_of_designated_roth?: number | null;
-            /**
-             * Fatca Filing Requirement
-             * @description Box 12: FATCA filing requirement
-             */
-            fatca_filing_requirement?: boolean | null;
-            /**
-             * Date Of Payment
-             * @description Box 13: Date of payment
-             */
-            date_of_payment?: string | null;
-            /**
-             * State Info
-             * @description Boxes 14-16: State tax withheld, State/Payer's state no., State distribution
-             */
-            state_info?: components["schemas"]["StateTaxRow"][];
-        };
-        /** FormDetail */
-        FormDetail: {
-            /** Id */
-            id: string;
-            /**
-             * Index
-             * @description Position of the form in the file (0-based).
-             */
-            index: number;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "ok" | "unsupported" | "duplicate";
-            /** Pages */
-            pages: number[];
-            /** Document Type */
-            document_type: string;
-            /** Form Name */
-            form_name: string | null;
-            /**
-             * Duplicate Of
-             * @description Index of the form this one is a copy of (status duplicate).
-             */
-            duplicate_of: number | null;
-            /**
-             * Review Status
-             * @description null: not reviewed (unsupported or duplicate).
-             */
-            review_status: ("pending" | "approved") | null;
-            /**
-             * Open Flags
-             * @description Flagged fields without a review decision.
-             */
-            open_flags: number;
-            /** Document Id */
-            document_id: string;
-            classification: components["schemas"]["ClassificationResult"];
-            /** Text Layer */
-            text_layer: boolean;
-            /** Extraction Model */
-            extraction_model: string | null;
-            /** Approved By */
-            approved_by: string | null;
-            /** Approved At */
-            approved_at: string | null;
-            /**
-             * Flags
-             * @description Flags about the whole form (or a field without a check).
-             */
-            flags: components["schemas"]["Flag"][];
-            /**
-             * Checks
-             * @description Every scalar field of the form schema in schema order, empty ones included; list fields contribute their extracted rows.
-             */
-            checks: components["schemas"]["Check"][];
-            /**
-             * Checked
-             * @description Checks with a review decision.
-             */
-            checked: number;
-            /**
-             * Total
-             * @description Number of checks.
-             */
-            total: number;
-            /**
-             * Corrected Fields
-             * @description The form's fields with every decision applied (rejected -> null); null for unsupported forms.
-             */
-            corrected_fields: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /**
-         * FormResult
-         * @description One form found in an uploaded file.
-         */
-        FormResult: {
-            /**
-             * Index
-             * @description Position of this form in the file (0-based).
-             */
-            index: number;
-            /**
-             * Status
-             * @description ok: extracted. unsupported: not one of the supported forms (pages listed, nothing extracted). duplicate: another copy of form `duplicate_of` in this file (e.g. W-2 Copy C).
-             * @enum {string}
-             */
-            status: "ok" | "unsupported" | "duplicate";
-            /** Pages */
-            pages: number[];
-            /**
-             * Document Type
-             * @description Supported form id, or 'unknown'.
-             */
-            document_type: string;
-            /** Form Name */
-            form_name?: string | null;
-            classification: components["schemas"]["ClassificationResult"];
-            /** Fields */
-            fields?: components["schemas"]["W2"] | components["schemas"]["Form1099NEC"] | components["schemas"]["Form1099MISC"] | components["schemas"]["Form1099INT"] | components["schemas"]["Form1099DIV"] | components["schemas"]["Form1099B"] | components["schemas"]["Form1099R"] | components["schemas"]["Form1099G"] | components["schemas"]["Form1099K"] | components["schemas"]["SSA1099"] | components["schemas"]["Form1098"] | components["schemas"]["Form1098T"] | components["schemas"]["Form1098E"] | components["schemas"]["Form1095A"] | components["schemas"]["ScheduleK1_1065"] | null;
-            validation?: components["schemas"]["ValidationReport"] | null;
-            /**
-             * Text Layer
-             * @description False when any part of the form was OCR'd.
-             */
-            text_layer: boolean;
-            /** Duplicate Of */
-            duplicate_of?: number | null;
-            /** Extraction Model */
-            extraction_model?: string | null;
-            /** Timings Ms */
-            timings_ms: {
-                [key: string]: number;
-            };
-        };
-        /** FormSummary */
-        FormSummary: {
-            /** Id */
-            id: string;
-            /**
-             * Index
-             * @description Position of the form in the file (0-based).
-             */
-            index: number;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "ok" | "unsupported" | "duplicate";
-            /** Pages */
-            pages: number[];
-            /** Document Type */
-            document_type: string;
-            /** Form Name */
-            form_name: string | null;
-            /**
-             * Duplicate Of
-             * @description Index of the form this one is a copy of (status duplicate).
-             */
-            duplicate_of: number | null;
-            /**
-             * Review Status
-             * @description null: not reviewed (unsupported or duplicate).
-             */
-            review_status: ("pending" | "approved") | null;
-            /**
-             * Open Flags
-             * @description Flagged fields without a review decision.
-             */
-            open_flags: number;
-        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -3683,14 +1796,17 @@ export interface components {
         };
         /** HealthResponse */
         HealthResponse: {
-            /** Status */
-            status: string;
-            /** Docling Loaded */
+            /**
+             * Status
+             * @description degraded: the document parser has not loaded.
+             * @enum {string}
+             */
+            status: "ok" | "degraded";
+            /**
+             * Docling Loaded
+             * @description PDFs and images can be parsed (text files do not need it).
+             */
             docling_loaded: boolean;
-            /** Ollama Reachable */
-            ollama_reachable: boolean;
-            /** Models */
-            models: components["schemas"]["ModelStatus"][];
         };
         /** Hint */
         Hint: {
@@ -3788,39 +1904,6 @@ export interface components {
              * @description What to ask next, most useful first (at most 5).
              */
             next: components["schemas"]["Question"][];
-        };
-        /** K1CapitalAccount */
-        K1CapitalAccount: {
-            /**
-             * Beginning Capital Account
-             * @description Item L: Beginning capital account
-             */
-            beginning_capital_account?: string | null;
-            /**
-             * Capital Contributed
-             * @description Item L: Capital contributed during the year
-             */
-            capital_contributed?: string | null;
-            /**
-             * Current Year Net Income
-             * @description Item L: Current year net income (loss)
-             */
-            current_year_net_income?: string | null;
-            /**
-             * Other Increase Decrease
-             * @description Item L: Other increase (decrease)
-             */
-            other_increase_decrease?: string | null;
-            /**
-             * Withdrawals And Distributions
-             * @description Item L: Withdrawals and distributions
-             */
-            withdrawals_and_distributions?: string | null;
-            /**
-             * Ending Capital Account
-             * @description Item L: Ending capital account
-             */
-            ending_capital_account?: string | null;
         };
         /**
          * KnowledgeMap
@@ -3932,10 +2015,7 @@ export interface components {
              */
             kind?: string | null;
         };
-        /**
-         * LibraryDocument
-         * @description Document-level metadata with review counts.
-         */
+        /** LibraryDocument */
         LibraryDocument: {
             /** Id */
             id: string;
@@ -3956,102 +2036,21 @@ export interface components {
              * @description SHA-256 of the file. Uploading the same file again returns this document.
              */
             content_hash: string;
-            /** Client */
-            client?: string | null;
-            /** Tax Year */
-            tax_year?: number | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
-            /** Chunks */
-            chunks: number;
             /**
-             * Document Types
-             * @description Form ids found (e.g. w2, 1099_b), plus `text` for other content.
+             * Chunks
+             * @description Indexed passages.
              */
-            document_types: string[];
+            chunks: number;
             /**
              * Page Count
              * @description Pages that can be rendered (0 for text files).
              */
             page_count: number;
-            /**
-             * Review Status
-             * @description pending: a form awaits approval; approved: every extracted form is approved; null: no forms.
-             */
-            review_status: ("pending" | "approved") | null;
-            /** Forms Pending */
-            forms_pending: number;
-            /** Forms Approved */
-            forms_approved: number;
-            /**
-             * Open Flags
-             * @description Flagged fields without a review decision, over all forms.
-             */
-            open_flags: number;
-        };
-        /** LibraryStats */
-        LibraryStats: {
-            /** Documents */
-            documents: number;
-            /**
-             * Forms
-             * @description Extracted forms (status ok).
-             */
-            forms: number;
-            /** Forms By Type */
-            forms_by_type: {
-                [key: string]: number;
-            };
-            /**
-             * Forms By Review Status
-             * @description pending / approved counts of extracted forms.
-             */
-            forms_by_review_status: {
-                [key: string]: number;
-            };
-            /**
-             * Open Flags
-             * @description Flagged fields without a review decision.
-             */
-            open_flags: number;
-            /**
-             * Clients
-             * @description Per client, most documents first.
-             */
-            clients: components["schemas"]["ClientStats"][];
-        };
-        /** ModelStatus */
-        ModelStatus: {
-            /** Name */
-            name: string;
-            /** Available */
-            available: boolean;
-        };
-        /** MonthlyCoverage */
-        MonthlyCoverage: {
-            /**
-             * Month
-             * @description Month
-             */
-            month?: string | null;
-            /**
-             * Enrollment Premium
-             * @description Monthly enrollment premiums
-             */
-            enrollment_premium?: string | null;
-            /**
-             * Slcsp Premium
-             * @description Monthly second lowest cost silver plan (SLCSP) premium
-             */
-            slcsp_premium?: string | null;
-            /**
-             * Advance Ptc
-             * @description Monthly advance payment of premium tax credit
-             */
-            advance_ptc?: string | null;
         };
         /**
          * Note
@@ -4140,7 +2139,7 @@ export interface components {
             width: number;
             /**
              * Height
-             * @description Page height in the same units. `ValueSource.box` uses a 1000-unit page width on both axes: scale boxes by rendered width / 1000.
+             * @description Page height in the same units.
              */
             height: number;
         };
@@ -4185,19 +2184,6 @@ export interface components {
             assistants_changed: boolean;
             interview: components["schemas"]["InterviewState"];
         };
-        /** Party */
-        Party: {
-            /** Name */
-            name?: string | null;
-            /**
-             * Tin
-             * @description SSN, ITIN or EIN
-             */
-            tin?: string | null;
-            address?: components["schemas"]["Address"] | null;
-            /** Phone */
-            phone?: string | null;
-        };
         /** Passage */
         Passage: {
             /** Chunk Id */
@@ -4213,8 +2199,6 @@ export interface components {
             page_number: number | null;
             /** Sheet Name */
             sheet_name: string | null;
-            /** Document Type */
-            document_type: string;
             /** Content */
             content: string;
             /**
@@ -4297,49 +2281,6 @@ export interface components {
              */
             fills: string[];
         };
-        /** Review */
-        Review: {
-            /**
-             * Decision
-             * @description confirmed: value is right; corrected: `value` replaces it; rejected: the value is wrong and there is no correct one (null).
-             * @enum {string}
-             */
-            decision: "confirmed" | "corrected" | "rejected";
-            /**
-             * Value
-             * @description The corrected value (decision corrected), normalised like extracted values.
-             */
-            value: boolean | number | string | null;
-            /** Note */
-            note: string | null;
-            /**
-             * Reviewer
-             * @description Name of the API key that made the decision.
-             */
-            reviewer: string;
-            /** Reviewer Id */
-            reviewer_id: number;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
-        /** ReviewRequest */
-        ReviewRequest: {
-            /**
-             * Decision
-             * @enum {string}
-             */
-            decision: "confirmed" | "corrected" | "rejected";
-            /**
-             * Value
-             * @description Required for `corrected`; parsed like extracted values (e.g. '1,234.50' -> 1234.5, '03/15/2025' -> '2025-03-15').
-             */
-            value?: boolean | number | string | null;
-            /** Note */
-            note?: string | null;
-        };
         /** Role */
         Role: {
             /**
@@ -4414,260 +2355,15 @@ export interface components {
                 [key: string]: unknown;
             };
         };
-        /** SSA1099 */
-        SSA1099: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /** @description Box 1: Name; Box 7: Address; TIN from 'Box 2: Beneficiary's social security number' */
-            beneficiary?: components["schemas"]["Party"] | null;
-            /**
-             * Benefits Paid
-             * @description Box 3: Benefits paid in the tax year
-             */
-            benefits_paid?: string | null;
-            /**
-             * Benefits Repaid
-             * @description Box 4: Benefits repaid to SSA in the tax year
-             */
-            benefits_repaid?: string | null;
-            /**
-             * Net Benefits
-             * @description Box 5: Net benefits for the tax year (box 3 minus box 4)
-             */
-            net_benefits?: string | null;
-            /**
-             * Voluntary Federal Income Tax Withheld
-             * @description Box 6: Voluntary federal income tax withheld
-             */
-            voluntary_federal_income_tax_withheld?: string | null;
-            /**
-             * Claim Number
-             * @description Box 8: Claim number (use this number if you need to contact SSA)
-             */
-            claim_number?: string | null;
-            /**
-             * Medicare Part B Premiums
-             * @description Medicare Part B premiums deducted from your benefits
-             */
-            medicare_part_b_premiums?: string | null;
-        };
-        /** ScheduleK1_1065 */
-        ScheduleK1_1065: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /** @description B Partnership's name, address, city, state, and ZIP code; TIN from 'A Partnership's employer identification number' */
-            partnership?: components["schemas"]["Party"] | null;
-            /**
-             * Irs Center
-             * @description Box C: IRS center where partnership filed return
-             */
-            irs_center?: string | null;
-            /**
-             * Publicly Traded Partnership
-             * @description Box D: Check if this is a publicly traded partnership (PTP)
-             */
-            publicly_traded_partnership?: boolean | null;
-            /** @description F Name, address, city, state, and ZIP code for partner; TIN from 'E Partner's SSN or TIN' */
-            partner?: components["schemas"]["Party"] | null;
-            /**
-             * General Partner Or Llc Member Manager
-             * @description Box G: General partner or LLC member-manager
-             */
-            general_partner_or_llc_member_manager?: boolean | null;
-            /**
-             * Limited Partner Or Other Llc Member
-             * @description Box G: Limited partner or other LLC member
-             */
-            limited_partner_or_other_llc_member?: boolean | null;
-            /**
-             * Domestic Partner
-             * @description Box H1: Domestic partner
-             */
-            domestic_partner?: boolean | null;
-            /**
-             * Foreign Partner
-             * @description Box H1: Foreign partner
-             */
-            foreign_partner?: boolean | null;
-            /**
-             * Partner Entity Type
-             * @description Box I1: What type of entity is this partner?
-             */
-            partner_entity_type?: string | null;
-            /**
-             * Profit Share Ending Percent
-             * @description Box J: Partner's share of profit (ending %)
-             */
-            profit_share_ending_percent?: string | null;
-            /**
-             * Loss Share Ending Percent
-             * @description Box J: Partner's share of loss (ending %)
-             */
-            loss_share_ending_percent?: string | null;
-            /**
-             * Capital Share Ending Percent
-             * @description Box J: Partner's share of capital (ending %)
-             */
-            capital_share_ending_percent?: string | null;
-            /** @description Item L: Partner's capital account analysis */
-            capital_account?: components["schemas"]["K1CapitalAccount"] | null;
-            /**
-             * Ordinary Business Income
-             * @description Box 1: Ordinary business income (loss)
-             */
-            ordinary_business_income?: string | null;
-            /**
-             * Net Rental Real Estate Income
-             * @description Box 2: Net rental real estate income (loss)
-             */
-            net_rental_real_estate_income?: string | null;
-            /**
-             * Other Net Rental Income
-             * @description Box 3: Other net rental income (loss)
-             */
-            other_net_rental_income?: string | null;
-            /**
-             * Guaranteed Payments For Services
-             * @description Box 4a: Guaranteed payments for services
-             */
-            guaranteed_payments_for_services?: string | null;
-            /**
-             * Guaranteed Payments For Capital
-             * @description Box 4b: Guaranteed payments for capital
-             */
-            guaranteed_payments_for_capital?: string | null;
-            /**
-             * Total Guaranteed Payments
-             * @description Box 4c: Total guaranteed payments
-             */
-            total_guaranteed_payments?: string | null;
-            /**
-             * Interest Income
-             * @description Box 5: Interest income
-             */
-            interest_income?: string | null;
-            /**
-             * Ordinary Dividends
-             * @description Box 6a: Ordinary dividends
-             */
-            ordinary_dividends?: string | null;
-            /**
-             * Qualified Dividends
-             * @description Box 6b: Qualified dividends
-             */
-            qualified_dividends?: string | null;
-            /**
-             * Dividend Equivalents
-             * @description Box 6c: Dividend equivalents
-             */
-            dividend_equivalents?: string | null;
-            /**
-             * Royalties
-             * @description Box 7: Royalties
-             */
-            royalties?: string | null;
-            /**
-             * Net Short Term Capital Gain
-             * @description Box 8: Net short-term capital gain (loss)
-             */
-            net_short_term_capital_gain?: string | null;
-            /**
-             * Net Long Term Capital Gain
-             * @description Box 9a: Net long-term capital gain (loss)
-             */
-            net_long_term_capital_gain?: string | null;
-            /**
-             * Collectibles 28 Gain
-             * @description Box 9b: Collectibles (28%) gain (loss)
-             */
-            collectibles_28_gain?: string | null;
-            /**
-             * Unrecaptured Section 1250 Gain
-             * @description Box 9c: Unrecaptured section 1250 gain
-             */
-            unrecaptured_section_1250_gain?: string | null;
-            /**
-             * Net Section 1231 Gain
-             * @description Box 10: Net section 1231 gain (loss)
-             */
-            net_section_1231_gain?: string | null;
-            /**
-             * Other Income
-             * @description Box 11: Other income (loss), code and amount
-             */
-            other_income?: components["schemas"]["CodedAmount"][];
-            /**
-             * Section 179 Deduction
-             * @description Box 12: Section 179 deduction
-             */
-            section_179_deduction?: string | null;
-            /**
-             * Other Deductions
-             * @description Box 13: Other deductions, code and amount
-             */
-            other_deductions?: components["schemas"]["CodedAmount"][];
-            /**
-             * Self Employment Earnings
-             * @description Box 14: Self-employment earnings (loss), code and amount
-             */
-            self_employment_earnings?: components["schemas"]["CodedAmount"][];
-            /**
-             * Credits
-             * @description Box 15: Credits, code and amount
-             */
-            credits?: components["schemas"]["CodedAmount"][];
-            /**
-             * Schedule K3 Attached
-             * @description Box 16: Schedule K-3 is attached if checked
-             */
-            schedule_k3_attached?: boolean | null;
-            /**
-             * Amt Items
-             * @description Box 17: Alternative minimum tax (AMT) items, code and amount
-             */
-            amt_items?: components["schemas"]["CodedAmount"][];
-            /**
-             * Tax Exempt Income And Nondeductible Expenses
-             * @description Box 18: Tax-exempt income and nondeductible expenses, code and amount
-             */
-            tax_exempt_income_and_nondeductible_expenses?: components["schemas"]["CodedAmount"][];
-            /**
-             * Distributions
-             * @description Box 19: Distributions, code and amount
-             */
-            distributions?: components["schemas"]["CodedAmount"][];
-            /**
-             * Other Information
-             * @description Box 20: Other information, code and amount
-             */
-            other_information?: components["schemas"]["CodedAmount"][];
-            /**
-             * Foreign Taxes Paid Or Accrued
-             * @description Box 21: Foreign taxes paid or accrued
-             */
-            foreign_taxes_paid_or_accrued?: string | null;
-        };
         /**
          * SearchFilters
-         * @description All set filters must match. Applied in the database before any ranking.
+         * @description What a search or a tool may read. Applied in the database before any ranking.
          */
         SearchFilters: {
-            /** Client */
-            client?: string | null;
-            /** Tax Year */
-            tax_year?: number | null;
             /**
-             * Document Type
-             * @description A form id from /v1/document-types, or `text` for non-form content.
+             * Document Ids
+             * @description Only these documents.
              */
-            document_type?: string | null;
-            /** Document Ids */
             document_ids?: string[] | null;
         };
         /** SearchHit */
@@ -4678,12 +2374,6 @@ export interface components {
             document_id: string;
             /** Title */
             title: string;
-            /** Client */
-            client: string | null;
-            /** Document Type */
-            document_type: string;
-            /** Tax Year */
-            tax_year: number | null;
             /** Section Title */
             section_title: string;
             /** Page Number */
@@ -4705,7 +2395,7 @@ export interface components {
             filters?: components["schemas"]["SearchFilters"];
             /**
              * Limit
-             * @description Default and maximum come from the assistant config.
+             * @description Default and maximum come from the library config.
              */
             limit?: number | null;
         };
@@ -4722,12 +2412,6 @@ export interface components {
             document_id: string;
             /** Title */
             title: string;
-            /** Client */
-            client: string | null;
-            /** Document Type */
-            document_type: string;
-            /** Tax Year */
-            tax_year: number | null;
             /** Section Title */
             section_title: string;
             /** Page Number */
@@ -4754,32 +2438,6 @@ export interface components {
             /** Title */
             title: string;
         };
-        /**
-         * StateTaxRow
-         * @description State/local information block common to 1099-series forms.
-         */
-        StateTaxRow: {
-            /**
-             * State
-             * @description State
-             */
-            state?: string | null;
-            /**
-             * Payer State Id
-             * @description Payer's state identification number
-             */
-            payer_state_id?: string | null;
-            /**
-             * State Income
-             * @description State income
-             */
-            state_income?: string | null;
-            /**
-             * State Tax Withheld
-             * @description State tax withheld
-             */
-            state_tax_withheld?: string | null;
-        };
         /** TableCreate */
         TableCreate: {
             /** Name */
@@ -4803,7 +2461,7 @@ export interface components {
         ToolCallInfo: {
             /**
              * Name
-             * @description Tool name, e.g. search_documents, get_document.
+             * @description Tool name, e.g. search_documents, read_document.
              */
             name: string;
             /**
@@ -4938,188 +2596,6 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
-        };
-        /** ValidationReport */
-        ValidationReport: {
-            /**
-             * Valid
-             * @description True when nothing was dropped, flagged or inconsistent (no flags).
-             */
-            valid: boolean;
-            /**
-             * Flags
-             * @description What a reviewer should check, each with its field path and code.
-             */
-            flags: components["schemas"]["Flag"][];
-            /** Fields Found */
-            fields_found: number;
-            /** Fields Total */
-            fields_total: number;
-            /**
-             * Sources
-             * @description Field path -> where each amount, TIN and table row was read.
-             */
-            sources?: {
-                [key: string]: components["schemas"]["ValueSource"];
-            };
-        };
-        /**
-         * ValueSource
-         * @description Where a value was read: the printed label it sits under, and its position.
-         */
-        ValueSource: {
-            /**
-             * Label
-             * @description Printed label the value sits under; null for unlabeled text.
-             */
-            label: string | null;
-            /** Page */
-            page: number;
-            /**
-             * Box
-             * @description left, top, right, bottom; page width is 1000 units, origin top-left.
-             */
-            box: [
-                number,
-                number,
-                number,
-                number
-            ];
-        };
-        /** W2 */
-        W2: {
-            /**
-             * Tax Year
-             * @description Calendar / tax year printed on the form
-             */
-            tax_year?: number | null;
-            /** @description e/f Employee's name, address, and ZIP code; TIN from 'a Employee's social security number' */
-            employee?: components["schemas"]["Party"] | null;
-            /** @description c Employer's name, address, and ZIP code; TIN from 'b Employer identification number (EIN)' */
-            employer?: components["schemas"]["Party"] | null;
-            /**
-             * Control Number
-             * @description Box d: Control number
-             */
-            control_number?: string | null;
-            /**
-             * Wages Tips Other Comp
-             * @description Box 1: Wages, tips, other compensation
-             */
-            wages_tips_other_comp?: string | null;
-            /**
-             * Federal Income Tax Withheld
-             * @description Box 2: Federal income tax withheld
-             */
-            federal_income_tax_withheld?: string | null;
-            /**
-             * Social Security Wages
-             * @description Box 3: Social security wages
-             */
-            social_security_wages?: string | null;
-            /**
-             * Social Security Tax Withheld
-             * @description Box 4: Social security tax withheld
-             */
-            social_security_tax_withheld?: string | null;
-            /**
-             * Medicare Wages And Tips
-             * @description Box 5: Medicare wages and tips
-             */
-            medicare_wages_and_tips?: string | null;
-            /**
-             * Medicare Tax Withheld
-             * @description Box 6: Medicare tax withheld
-             */
-            medicare_tax_withheld?: string | null;
-            /**
-             * Social Security Tips
-             * @description Box 7: Social security tips
-             */
-            social_security_tips?: string | null;
-            /**
-             * Allocated Tips
-             * @description Box 8: Allocated tips
-             */
-            allocated_tips?: string | null;
-            /**
-             * Dependent Care Benefits
-             * @description Box 10: Dependent care benefits
-             */
-            dependent_care_benefits?: string | null;
-            /**
-             * Nonqualified Plans
-             * @description Box 11: Nonqualified plans
-             */
-            nonqualified_plans?: string | null;
-            /**
-             * Box12
-             * @description Box 12a-12d: code and amount (e.g. D, DD, W)
-             */
-            box12?: components["schemas"]["CodedAmount"][];
-            /**
-             * Statutory Employee
-             * @description Box 13: Statutory employee
-             */
-            statutory_employee?: boolean | null;
-            /**
-             * Retirement Plan
-             * @description Box 13: Retirement plan
-             */
-            retirement_plan?: boolean | null;
-            /**
-             * Third Party Sick Pay
-             * @description Box 13: Third-party sick pay
-             */
-            third_party_sick_pay?: boolean | null;
-            /**
-             * Box14 Other
-             * @description Box 14: Other (description and amount)
-             */
-            box14_other?: components["schemas"]["DescribedAmount"][];
-            /**
-             * State Local
-             * @description Boxes 15-20: state and local tax rows
-             */
-            state_local?: components["schemas"]["W2StateRow"][];
-        };
-        /** W2StateRow */
-        W2StateRow: {
-            /**
-             * State
-             * @description Box 15: State
-             */
-            state?: string | null;
-            /**
-             * Employer State Id
-             * @description Box 15: Employer's state ID number
-             */
-            employer_state_id?: string | null;
-            /**
-             * State Wages
-             * @description Box 16: State wages, tips, etc.
-             */
-            state_wages?: string | null;
-            /**
-             * State Income Tax
-             * @description Box 17: State income tax
-             */
-            state_income_tax?: string | null;
-            /**
-             * Local Wages
-             * @description Box 18: Local wages, tips, etc.
-             */
-            local_wages?: string | null;
-            /**
-             * Local Income Tax
-             * @description Box 19: Local income tax
-             */
-            local_income_tax?: string | null;
-            /**
-             * Locality Name
-             * @description Box 20: Locality name
-             */
-            locality_name?: string | null;
         };
         /** WorkspaceSummary */
         WorkspaceSummary: {
@@ -5357,316 +2833,17 @@ export interface operations {
             };
         };
     };
-    extract_document_v1_documents_extract_post: {
-        parameters: {
-            query?: {
-                /** @description Skip classification: treat the whole file as this form. */
-                document_type?: components["schemas"]["DocumentTypeId"] | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_extract_document_v1_documents_extract_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_ExtractResponse_"];
-                };
-            };
-            /** @description Empty or malformed request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description File, file count or page count over the limit */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not a PDF or supported image */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Rate limit exceeded */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Server busy, or a model backend is unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    extract_bulk_v1_documents_extract_bulk_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_extract_bulk_v1_documents_extract_bulk_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_BulkExtractResponse_"];
-                };
-            };
-            /** @description Empty or malformed request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description File, file count or page count over the limit */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Rate limit exceeded */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Server busy, or a model backend is unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    classify_document_v1_documents_classify_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_classify_document_v1_documents_classify_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_ClassifyResponse_"];
-                };
-            };
-            /** @description Empty or malformed request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description File, file count or page count over the limit */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not a PDF or supported image */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Rate limit exceeded */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Server busy, or a model backend is unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    document_types_v1_document_types_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_list_DocumentType__"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Rate limit exceeded */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
     list_documents_v1_library_documents_get: {
         parameters: {
             query?: {
+                /** @description Text in the title. */
+                q?: string | null;
+                /** @description upload: uploaded files (default); workspace: the workspace's own index records (profile, discovery answers, notes). */
+                origin?: ("upload" | "workspace") | null;
                 limit?: number;
                 offset?: number;
                 /** @description By upload time. */
                 order?: "newest" | "oldest";
-                client?: string | null;
-                tax_year?: number | null;
-                /** @description Form id, or `text`. */
-                document_type?: string | null;
-                /** @description pending: any form awaits approval; approved: every extracted form is approved. */
-                review_status?: ("pending" | "approved") | null;
-                /** @description Text in the title or client name. */
-                q?: string | null;
-                /** @description upload: uploaded files (default); workspace: the workspace's own index records (profile, discovery answers, notes). */
-                origin?: ("upload" | "workspace") | null;
             };
             header?: never;
             path?: never;
@@ -5752,7 +2929,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
+            /** @description Conflict: library built with another embedding model, an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -5761,7 +2938,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description File, file count or page count over the limit */
+            /** @description File or page count over the limit */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -5770,7 +2947,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Not a PDF or supported image */
+            /** @description Not a supported file type */
             415: {
                 headers: {
                     [name: string]: unknown;
@@ -5779,7 +2956,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -5799,64 +2976,6 @@ export interface operations {
             };
             /** @description Server busy, or a model backend is unavailable */
             503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    stats_v1_library_stats_get: {
-        parameters: {
-            query?: {
-                client?: string | null;
-                tax_year?: number | null;
-                /** @description Form id, or `text`. */
-                document_type?: string | null;
-                /** @description pending: any form awaits approval; approved: every extracted form is approved. */
-                review_status?: ("pending" | "approved") | null;
-                /** @description Text in the title or client name. */
-                q?: string | null;
-                /** @description upload: uploaded files (default); workspace: the workspace's own index records (profile, discovery answers, notes). */
-                origin?: ("upload" | "workspace") | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_LibraryStats_"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Rate limit exceeded */
-            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6138,7 +3257,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
+            /** @description Conflict: library built with another embedding model, an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6176,311 +3295,6 @@ export interface operations {
             };
         };
     };
-    get_form_v1_library_forms__form_id__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                form_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_FormDetail_"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    set_review_v1_library_forms__form_id__reviews__field__put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                form_id: string;
-                field: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReviewRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_Check_"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Server busy, or a model backend is unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    clear_review_v1_library_forms__form_id__reviews__field__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                form_id: string;
-                field: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_Check_"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Server busy, or a model backend is unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    approve_v1_library_forms__form_id__approve_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                form_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_FormDetail_"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reopen_v1_library_forms__form_id__reopen_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                form_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Envelope_FormDetail_"];
-                };
-            };
-            /** @description Missing or invalid API key */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     chat_v1_assistant_chat_post: {
         parameters: {
             query?: never;
@@ -6512,7 +3326,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
+            /** @description Conflict: library built with another embedding model, an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -6681,7 +3495,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6761,7 +3575,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6803,7 +3617,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6903,7 +3717,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -6986,7 +3800,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -7086,7 +3900,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -7188,7 +4002,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -7390,7 +4204,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
+            /** @description Conflict: library built with another embedding model, an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7511,7 +4325,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
+            /** @description Conflict: library built with another embedding model, an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -7520,7 +4334,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -7629,7 +4443,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -7823,7 +4637,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -7881,7 +4695,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -7934,7 +4748,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -7987,7 +4801,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description File, file count or page count over the limit */
+            /** @description File or page count over the limit */
             413: {
                 headers: {
                     [name: string]: unknown;
@@ -7996,7 +4810,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8044,7 +4858,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8097,7 +4911,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8151,7 +4965,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8201,7 +5015,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8254,7 +5068,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8303,7 +5117,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8356,7 +5170,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, connector or database statement */
+            /** @description Unreadable document; invalid request, assistant spec, connector or database statement */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -8497,7 +5311,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Conflict: library built with another embedding model, a review rule (approval with undecided flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval already decided */
+            /** @description Conflict: library built with another embedding model, an inactive assistant or an approval already decided */
             409: {
                 headers: {
                     [name: string]: unknown;

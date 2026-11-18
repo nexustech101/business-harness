@@ -48,14 +48,14 @@ it("sends the conversation with the screen state; profile_changed refetches the 
   expect(second.ui_state).toMatchObject({ page: "/partner", entity: null });
 });
 
-it("uploads files without extraction, then tells the partner their ids and titles; next questions ask", async () => {
+it("uploads files, then tells the partner their ids and titles; next questions ask", async () => {
   const user = userEvent.setup();
   const interview: InterviewState = { ...workspace().interview, next: [{ id: "finance.method", area: "finance", text: "Cash or accrual?", purpose: "Sets up the books.", fills: [] }] };
   const { sent } = renderApp("/partner", (route, { request }) => {
     if (route === "GET /v1/business/interview") return json(200, { data: interview });
     if (route === "POST /v1/library/documents") {
       const file = sentForm(request).get("file") as File;
-      return json(201, { data: document([], `d-${file.name}`, file.name.replace(".pdf", "")) });
+      return json(201, { data: document(`d-${file.name}`, file.name.replace(".pdf", "")) });
     }
     if (route === "POST /v1/partner/chat") return json(200, { data: reply("Filed both under Sales.", { interview }) });
     return undefined;
@@ -64,7 +64,7 @@ it("uploads files without extraction, then tells the partner their ids and title
   await user.upload(await screen.findByTestId("partner-upload"), files);
   await screen.findByText("Filed both under Sales.");
   const uploads = sent("POST /v1/library/documents").map((r) => sentForm(r.request));
-  expect(uploads.map((f) => [(f.get("file") as File).name, f.get("extract")])).toEqual([["prices.pdf", "false"], ["menu.pdf", "false"]]);
+  expect(uploads.map((f) => (f.get("file") as File).name)).toEqual(["prices.pdf", "menu.pdf"]);
   expect((sent("POST /v1/partner/chat")[0]!.body as Body).messages).toEqual([
     {
       role: "user",

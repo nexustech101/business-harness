@@ -15,7 +15,7 @@ const WINDOWS = process.platform === "win32";
 
 export default async function globalSetup() {
   if (!existsSync(join(ROOT, "web", "dist", "index.html"))) throw new Error("Build first: npm run build (npm run e2e does)");
-  const dir = mkdtempSync(join(tmpdir(), "tda-e2e-"));
+  const dir = mkdtempSync(join(tmpdir(), "harness-e2e-"));
   const state = join(dir, "state.json");
   const stack = spawn(
     "uv",

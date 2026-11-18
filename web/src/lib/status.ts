@@ -1,6 +1,6 @@
 /** Display of assistant, connector and approval statuses and tool-run outcomes: a short label and a tone each. */
 import type { ApprovalStatus, AssistantStatus, ConnectorStatus, ToolRun } from "../api/types";
-import type { Tone } from "./flags";
+import type { Tone } from "./tone";
 
 type Display = { label: string; tone: Tone };
 

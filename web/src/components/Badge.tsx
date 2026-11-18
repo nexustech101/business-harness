@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { Tone } from "../lib/flags";
+import type { Tone } from "../lib/tone";
 import styles from "./Badge.module.css";
 
 type Props = { tone?: Tone; icon?: ReactNode; children: ReactNode; title?: string; dot?: boolean };

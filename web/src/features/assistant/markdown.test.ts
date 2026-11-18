@@ -10,9 +10,9 @@ describe("parseMarkdown", () => {
   });
 
   it("groups bullet and numbered lists, with indented continuations", () => {
-    expect(parseMarkdown("Open flags:\n- w2: 2\n  still open\n* stack: 6\n\n3. one\n4) two")).toEqual([
-      { kind: "p", inlines: [{ text: "Open flags:" }] },
-      { kind: "ul", items: [[{ text: "w2: 2 still open" }], [{ text: "stack: 6" }]] },
+    expect(parseMarkdown("Open items:\n- invoices: 2\n  still open\n* quotes: 6\n\n3. one\n4) two")).toEqual([
+      { kind: "p", inlines: [{ text: "Open items:" }] },
+      { kind: "ul", items: [[{ text: "invoices: 2 still open" }], [{ text: "quotes: 6" }]] },
       { kind: "ol", start: 3, items: [[{ text: "one" }], [{ text: "two" }]] },
     ]);
   });

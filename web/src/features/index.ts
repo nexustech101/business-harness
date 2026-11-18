@@ -16,14 +16,13 @@ import { useActiveAssistantLinks } from "./assistants/hooks";
 import { ConnectorsPage } from "./connectors/ConnectorsPage";
 import { DashboardPage } from "./dashboard/DashboardPage";
 import { DatabasesPage } from "./databases/DatabasesPage";
+import { DocumentPage } from "./documents/DocumentPage";
 import { DocumentsPage } from "./documents/DocumentsPage";
 import { KnowledgePage } from "./knowledge/KnowledgePage";
 import { NotesPage } from "./notes/NotesPage";
-import { OverviewPage } from "./overview/OverviewPage";
 import { PartnerPage } from "./partner/PartnerPage";
 import { ProfilePage } from "./profile/ProfilePage";
 import { useProfileLinks } from "./profile/sections";
-import { ReviewPage } from "./review/ReviewPage";
 import { SettingsPage } from "./settings/SettingsPage";
 
 export const SECTIONS = ["Workspace", "Operations", "Knowledge", "Connect"] as const;
@@ -51,8 +50,7 @@ export const pages: Page[] = [
   { path: "/profile", label: "Business profile", icon: Building2, component: ProfilePage, section: "Knowledge", useChildren: useProfileLinks },
   { path: "/knowledge", label: "Knowledge", icon: BookOpen, component: KnowledgePage, section: "Knowledge" },
   { path: "/documents", label: "Documents", icon: FileText, component: DocumentsPage, section: "Knowledge" },
-  { path: "/documents/overview", label: "Document overview", component: OverviewPage },
-  { path: "/documents/:id", label: "Review", component: ReviewPage, fullBleed: true },
+  { path: "/documents/:id", label: "Document", component: DocumentPage },
   { path: "/assistant", label: "Ask documents", icon: Mark, component: AssistantPage, section: "Knowledge", fullBleed: true },
   { path: "/connectors", label: "Plugins", icon: Plug, component: ConnectorsPage, section: "Connect" },
   { path: "/databases", label: "Databases", icon: Database, component: DatabasesPage, section: "Connect" },

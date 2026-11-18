@@ -10,8 +10,8 @@ export type Turn = { role: "user"; content: string } | { role: "assistant"; cont
 
 export type ScopedDocument = { id: string; title: string };
 
-/** Client and tax year, or documents: attaching a document clears client and year (all filters must match). */
-export type Scope = { client?: string; tax_year?: number; documents: ScopedDocument[] };
+/** The documents a conversation is limited to; none: everything the key may read. */
+export type Scope = { documents: ScopedDocument[] };
 
 type Assistant = {
   turns: Turn[];
@@ -29,7 +29,7 @@ type Assistant = {
   panelOpen: boolean;
   openPanel: () => void;
   closePanel: () => void;
-  /** The document the user is looking at (set by the review page): opening the panel scopes to it. */
+  /** The document the user is looking at (set by the document page): opening the panel scopes to it. */
   setCurrentDocument: (document: ScopedDocument | null) => void;
 };
 
@@ -42,14 +42,10 @@ export function useAssistant(): Assistant {
 }
 
 export function toFilters(scope: Scope): SearchFilters {
-  return {
-    client: scope.client ?? null,
-    tax_year: scope.tax_year ?? null,
-    document_ids: scope.documents.length ? scope.documents.map((d) => d.id) : null,
-  };
+  return { document_ids: scope.documents.length ? scope.documents.map((d) => d.id) : null };
 }
 
-/** The scope with `document` added (client and year cleared). */
+/** The scope with `document` added. */
 export function withDocument(scope: Scope, document: ScopedDocument): Scope {
   if (scope.documents.some((d) => d.id === document.id)) return scope;
   return { documents: [...scope.documents, document] };

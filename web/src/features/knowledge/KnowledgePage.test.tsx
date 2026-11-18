@@ -31,8 +31,8 @@ it("lists every source with what was never retrieved, filters to unread ones and
         data: {
           document_id: "d1", title: "handbook", count: 3,
           passages: [
-            { chunk_id: "c1", index: 0, section_title: "Terms", page_number: null, sheet_name: null, document_type: "text", content: "Net 14 days.", retrievals: 2, last_retrieved_at: AT },
-            { chunk_id: "c2", index: 1, section_title: "Refunds", page_number: null, sheet_name: null, document_type: "text", content: "Refund within 24 hours.", retrievals: 0, last_retrieved_at: null },
+            { chunk_id: "c1", index: 0, section_title: "Terms", page_number: null, sheet_name: null, content: "Net 14 days.", retrievals: 2, last_retrieved_at: AT },
+            { chunk_id: "c2", index: 1, section_title: "Refunds", page_number: null, sheet_name: null, content: "Refund within 24 hours.", retrievals: 0, last_retrieved_at: null },
           ],
         },
       });
@@ -69,7 +69,7 @@ it("searches the index and names the sources that matched without being shown", 
     if (route === "POST /v1/knowledge/search") {
       return json(200, {
         data: {
-          hits: [{ chunk_id: "c2", document_id: "d1", title: "handbook", client: null, document_type: "text", tax_year: null, section_title: "Refunds", page_number: 2, sheet_name: null, content: "Refund within 24 hours.", similarity: 0.8 }],
+          hits: [{ chunk_id: "c2", document_id: "d1", title: "handbook", section_title: "Refunds", page_number: 2, sheet_name: null, content: "Refund within 24 hours.", similarity: 0.8 }],
           other_sources: [{ document_id: "d2", title: "Business profile" }],
         },
       });
@@ -91,7 +91,7 @@ it("a search result opens its source even when the list does not show it", async
     if (route === "POST /v1/knowledge/search") {
       return json(200, {
         data: {
-          hits: [{ chunk_id: "p1", document_id: "d2", title: "Business profile", client: null, document_type: "text", tax_year: null, section_title: "Overview", page_number: null, sheet_name: null, content: "Artisan bread.", similarity: 0.9 }],
+          hits: [{ chunk_id: "p1", document_id: "d2", title: "Business profile", section_title: "Overview", page_number: null, sheet_name: null, content: "Artisan bread.", similarity: 0.9 }],
           other_sources: [],
         },
       });
@@ -100,7 +100,7 @@ it("a search result opens its source even when the list does not show it", async
       return json(200, {
         data: {
           document_id: "d2", title: "Business profile", count: 1,
-          passages: [{ chunk_id: "p1", index: 0, section_title: "Overview", page_number: null, sheet_name: null, document_type: "text", content: "Artisan bread.", retrievals: 1, last_retrieved_at: AT }],
+          passages: [{ chunk_id: "p1", index: 0, section_title: "Overview", page_number: null, sheet_name: null, content: "Artisan bread.", retrievals: 1, last_retrieved_at: AT }],
         },
       });
     }

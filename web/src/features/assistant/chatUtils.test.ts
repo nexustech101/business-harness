@@ -25,12 +25,13 @@ describe("isNearBottom", () => {
 });
 
 describe("describeTool", () => {
-  const titles = new Map([["d1", "w2"]]);
+  const titles = new Map([["d1", "handbook"]]);
   it("words each tool, with the document title when known", () => {
-    expect(describeTool({ name: "search_documents", arguments: { query: " wages " } }, titles)).toBe("Searched “wages”");
+    expect(describeTool({ name: "search_documents", arguments: { query: " refunds " } }, titles)).toBe("Searched “refunds”");
     expect(describeTool({ name: "list_documents", arguments: {} }, titles)).toBe("Listed documents");
-    expect(describeTool({ name: "get_document", arguments: { document_id: "d1" } }, titles)).toBe("Read w2");
-    expect(describeTool({ name: "classify_document", arguments: { document_id: "x" } }, titles)).toBe("Classified a document");
+    expect(describeTool({ name: "browse_knowledge", arguments: {} }, titles)).toBe("Browsed the knowledge index");
+    expect(describeTool({ name: "read_document", arguments: { document_id: "d1" } }, titles)).toBe("Read handbook");
+    expect(describeTool({ name: "read_document", arguments: { document_id: "x" } }, titles)).toBe("Read a document");
     expect(describeTool({ name: "other", arguments: {} }, titles)).toBe("Ran other");
   });
 

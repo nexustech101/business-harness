@@ -1,8 +1,8 @@
-import { ArrowLeft, ArrowUp, CalendarDays, ChevronDown, ChevronRight, CircleAlert, FileText, FolderOpen, Plus, Search, Upload, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowUp, ChevronRight, CircleAlert, FileText, FolderOpen, Plus, Search, Upload, X } from "lucide-react";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { errorMessage } from "../../api/client";
-import { useDocuments, useStats } from "../../api/library";
-import { useAssistant, type ScopedDocument } from "../../app/assistant";
+import { useDocuments } from "../../api/library";
+import type { ScopedDocument } from "../../app/assistant";
 import { Menu, MenuHeading, MenuItem, MenuSeparator } from "../../components/Menu";
 import { Spinner } from "../../components/Spinner";
 import { useComposer } from "./hooks";
@@ -19,7 +19,7 @@ type Props = {
 
 /**
  * The question box shared by the page and the panel: auto-growing textarea (Enter sends, Shift+Enter breaks the
- * line), the "+" menu (upload or attach a document), scope pills or document chips, and send / stop.
+ * line), the "+" menu (upload or attach a document), the chips of attached documents, and send / stop.
  */
 export function Composer({ placement, minRows = 1, autoFocus }: Props) {
   const { text, setText, area, submit, keyDown, attach, uploadFile, upload, uploading, canSend, pending, stop, scope, setScope } = useComposer(autoFocus);
@@ -71,12 +71,7 @@ export function Composer({ placement, minRows = 1, autoFocus }: Props) {
                 </button>
               </span>
             ))
-          ) : (
-            <>
-              <ClientPill placement={placement} />
-              <YearPill placement={placement} />
-            </>
-          )}
+          ) : null}
         </div>
         {pending ? (
           <button type="button" className={`${styles.send} ${styles.stop}`} onClick={stop} aria-label="Stop" title="Stop">
@@ -97,7 +92,7 @@ export function Composer({ placement, minRows = 1, autoFocus }: Props) {
 function placeholder(documents: ScopedDocument[]): string {
   if (documents.length === 1) return `Ask about ${documents[0]!.title}`;
   if (documents.length > 1) return "Ask about these documents";
-  return "Ask about clients, forms or open flags";
+  return "Ask about your documents and your business";
 }
 
 type AddMenuProps = {
@@ -212,7 +207,6 @@ function DocumentPicker({ attached, onPick, onBack }: { attached: ScopedDocument
             <MenuItem
               key={d.id}
               icon={<FileText />}
-              hint={[d.client, d.tax_year].filter(Boolean).join(" · ") || undefined}
               disabled={ids.has(d.id)}
               onClick={() => onPick({ id: d.id, title: d.title })}
             >
@@ -222,73 +216,5 @@ function DocumentPicker({ attached, onPick, onBack }: { attached: ScopedDocument
         </>
       )}
     </div>
-  );
-}
-
-function ClientPill({ placement }: { placement: "top" | "bottom" }) {
-  const { scope, setScope } = useAssistant();
-  const clients = useStats().data?.clients.flatMap((c) => (c.client ? [{ name: c.client, documents: c.documents }] : [])) ?? [];
-  const set = (client: string | undefined) => setScope((s) => ({ ...s, client }));
-  return (
-    <Menu
-      label={`Client scope: ${scope.client ?? "All clients"}`}
-      placement={placement}
-      triggerClassName={`${styles.pill} ${scope.client ? styles.pillSet : ""}`}
-      trigger={() => (
-        <>
-          <Users aria-hidden />
-          <span className="truncate">{scope.client ?? "All clients"}</span>
-          <ChevronDown className={styles.chevron} aria-hidden />
-        </>
-      )}
-    >
-      {(close) => (
-        <>
-          <MenuItem checked={!scope.client} onClick={() => (set(undefined), close())}>
-            All clients
-          </MenuItem>
-          {clients.length > 0 && <MenuSeparator />}
-          {clients.map((c) => (
-            <MenuItem key={c.name} checked={scope.client === c.name} hint={c.documents} onClick={() => (set(c.name), close())}>
-              {c.name}
-            </MenuItem>
-          ))}
-        </>
-      )}
-    </Menu>
-  );
-}
-
-function YearPill({ placement }: { placement: "top" | "bottom" }) {
-  const { scope, setScope } = useAssistant();
-  const set = (tax_year: number | undefined) => setScope((s) => ({ ...s, tax_year }));
-  const now = new Date().getFullYear();
-  return (
-    <Menu
-      label={`Tax year scope: ${scope.tax_year ?? "Any year"}`}
-      placement={placement}
-      triggerClassName={`${styles.pill} ${scope.tax_year ? styles.pillSet : ""}`}
-      trigger={() => (
-        <>
-          <CalendarDays aria-hidden />
-          <span className="num">{scope.tax_year ?? "Any year"}</span>
-          <ChevronDown className={styles.chevron} aria-hidden />
-        </>
-      )}
-    >
-      {(close) => (
-        <>
-          <MenuItem checked={!scope.tax_year} onClick={() => (set(undefined), close())}>
-            Any year
-          </MenuItem>
-          <MenuSeparator />
-          {Array.from({ length: 8 }, (_, i) => now - i).map((y) => (
-            <MenuItem key={y} checked={scope.tax_year === y} onClick={() => (set(y), close())} className="num">
-              {y}
-            </MenuItem>
-          ))}
-        </>
-      )}
-    </Menu>
   );
 }

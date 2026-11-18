@@ -8,7 +8,7 @@ export type UploadItem = { file: File; state: "queued" | "uploading" | "done" | 
 
 /**
  * Files to upload, each with its own state, result or error. `start` sends the ones not yet done one after another
- * (the API processes uploads one per extraction slot); `tax_year` is sent only when it is four digits.
+ * (the API reads and indexes one document per upload slot).
  */
 export function useUploadQueue() {
   const upload = useUploadDocument();
@@ -22,18 +22,13 @@ export function useUploadQueue() {
   const remove = (i: number) => setItems((all) => all.filter((_, j) => j !== i));
   const update = (i: number, change: Partial<UploadItem>) => setItems((all) => all.map((item, j) => (j === i ? { ...item, ...change } : item)));
 
-  const start = async (client: string, year: string) => {
+  const start = async () => {
     setRunning(true);
     for (const [i, item] of items.entries()) {
       if (item.state === "done") continue;
       update(i, { state: "uploading", error: undefined });
       try {
-        const result = await upload.mutateAsync({
-          file: item.file,
-          client: client.trim() || undefined,
-          tax_year: /^\d{4}$/.test(year) ? Number(year) : undefined,
-        });
-        update(i, { state: "done", result });
+        update(i, { state: "done", result: await upload.mutateAsync(item.file) });
       } catch (error) {
         update(i, { state: "failed", error: errorMessage(error) });
       }

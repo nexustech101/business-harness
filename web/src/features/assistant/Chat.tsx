@@ -1,9 +1,6 @@
-import { Banknote, FileSearch, FileText, Flag, Hourglass, ListChecks, type LucideIcon } from "lucide-react";
-import { useEffect, useId, useLayoutEffect, useRef } from "react";
-import { Link } from "react-router";
-import { useDocuments } from "../../api/library";
-import { useAssistant, type Scope } from "../../app/assistant";
-import { plural } from "../../lib/format";
+import { FileSearch, FileText, Handshake, ListChecks, Target, Users, type LucideIcon } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { useAssistant } from "../../app/assistant";
 import { greeting, isNearBottom } from "./chatUtils";
 import { Composer } from "./Composer";
 import { Mark } from "./Mark";
@@ -14,15 +11,15 @@ type Variant = "page" | "panel";
 type Suggestion = { icon: LucideIcon; label: string; prompt: string };
 
 const LIBRARY: Suggestion[] = [
-  { icon: Flag, label: "Documents with open flags", prompt: "List the documents that still have open flags" },
-  { icon: Hourglass, label: "Forms awaiting approval", prompt: "Which clients have forms waiting for approval?" },
-  { icon: Banknote, label: "W-2 wages", prompt: "What were the wages, tips and other compensation?" },
+  { icon: FileText, label: "What is on file?", prompt: "List the documents that are on file" },
+  { icon: Users, label: "Who does what?", prompt: "Which roles does the business have, and what is each responsible for?" },
+  { icon: Target, label: "Goals", prompt: "What are the goals of the business, and what stands in the way?" },
 ];
 
 const DOCUMENT: Suggestion[] = [
-  { icon: ListChecks, label: "Summarize", prompt: "Summarize this document: its forms, key amounts and review status." },
-  { icon: Flag, label: "What is flagged?", prompt: "Which values are flagged in this document, and why?" },
-  { icon: FileSearch, label: "Key amounts", prompt: "What are the key amounts on this document?" },
+  { icon: ListChecks, label: "Summarize", prompt: "Summarize this document: what it is, who it concerns and its key points." },
+  { icon: FileSearch, label: "Key figures", prompt: "What are the key amounts, dates and terms in this document?" },
+  { icon: Handshake, label: "Obligations", prompt: "What does this document commit the business to?" },
 ];
 
 /** The assistant conversation: a welcome until the first question, then the thread with the composer docked below. */
@@ -57,45 +54,8 @@ function Welcome() {
             </button>
           ))}
         </div>
-        <NeedsReview />
       </div>
     </div>
-  );
-}
-
-/** Up to three documents with open flags; a card starts a chat scoped to its document. */
-function NeedsReview() {
-  const { ask } = useAssistant();
-  const id = useId();
-  const { data } = useDocuments({ review_status: "pending", limit: 25 });
-  const documents = data?.documents.filter((d) => d.open_flags > 0).slice(0, 3) ?? [];
-  if (!documents.length) return null;
-  return (
-    <section className={styles.review} aria-labelledby={id}>
-      <header className={styles.reviewHead}>
-        <h2 id={id}>Needs review</h2>
-        <Link to="/documents?review_status=pending">View all</Link>
-      </header>
-      <div className={styles.reviewGrid}>
-        {documents.map((d) => {
-          const scope: Scope = { documents: [{ id: d.id, title: d.title }] };
-          return (
-            <button key={d.id} type="button" className={styles.reviewCard} onClick={() => ask("What still needs review in this document?", scope)}>
-              <span className={styles.reviewIcon}>
-                <FileText aria-hidden />
-              </span>
-              <span className={styles.reviewText}>
-                <span className={`${styles.reviewTitle} truncate`}>{d.title}</span>
-                <span className={`${styles.reviewMeta} truncate num`}>
-                  {[d.client ?? "No client", d.tax_year].filter(Boolean).join(" · ")}
-                </span>
-              </span>
-              <span className={`${styles.flags} num`}>{plural(d.open_flags, "flag")}</span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
   );
 }
 
@@ -108,7 +68,7 @@ function PanelWelcome() {
         <div className={styles.panelIntro}>
           <Mark size={24} />
           <h3>What can I help with?</h3>
-          <p>Answers come from stored documents and reviewed values, with sources. Nothing is changed.</p>
+          <p>Answers come from your documents and the business's records, with sources. Nothing is changed.</p>
         </div>
         <div className={styles.list}>
           {suggestions.map(({ icon: Icon, prompt }) => (
@@ -171,7 +131,7 @@ function Dock({ variant }: { variant: Variant }) {
     <div className={`${styles.dock} ${styles[variant]}`}>
       <div className={styles.dockInner}>
         <Composer placement="top" autoFocus />
-        {variant === "page" && <p className={styles.note}>Answers come from stored documents and reviewed values. The assistant never changes records.</p>}
+        {variant === "page" && <p className={styles.note}>Answers come from your documents and the business's records. The assistant never changes them.</p>}
       </div>
     </div>
   );

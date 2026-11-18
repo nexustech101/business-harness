@@ -13,7 +13,7 @@ import { Card } from "../../components/Card";
 import { PageHeader } from "../../components/PageHeader";
 import { Progress } from "../../components/Progress";
 import { Skeleton } from "../../components/Skeleton";
-import type { Tone } from "../../lib/flags";
+import type { Tone } from "../../lib/tone";
 import { formatCount } from "../../lib/format";
 import { ASSISTANT_STATUS, CONNECTOR_STATUS } from "../../lib/status";
 import styles from "./DashboardPage.module.css";

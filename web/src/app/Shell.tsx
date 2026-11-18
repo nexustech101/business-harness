@@ -81,7 +81,7 @@ function GlobalSearch() {
   return (
     <form className={styles.search} onSubmit={submit} role="search">
       <Search aria-hidden />
-      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find documents by title or client" aria-label="Find documents" />
+      <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Find documents by title" aria-label="Find documents" />
     </form>
   );
 }

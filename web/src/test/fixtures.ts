@@ -1,34 +1,11 @@
 /** API objects for component tests, shaped by the generated types. */
-import type { Approval, AssistantInfo, Check, ConnectorInfo, ConnectorListing, DocumentDetail, FormDetail, WorkspaceSummary } from "../api/types";
+import type { Approval, AssistantInfo, ConnectorInfo, ConnectorListing, DocumentDetail, WorkspaceSummary } from "../api/types";
 import type { JsonSchema } from "../features/assistants/specSchema";
 
-export function check(field: string, label: string, flagged: boolean, value: Check["value"] = 1000): Check {
-  return {
-    field, label, group: null, kind: "money", value, source: null, review: null,
-    flags: flagged ? [{ field, code: "not_printed", message: `${label} is not printed` }] : [],
-  };
-}
-
-/** A W-2 with three flagged money fields and one unflagged. */
-export function w2(): FormDetail {
-  const checks = [check("wages", "Wages", true), check("federal", "Federal tax", true), check("state", "State tax", true), check("medicare", "Medicare", false)];
-  return {
-    id: "f1", document_id: "d1", index: 0, status: "ok", pages: [1], document_type: "w2", form_name: "W-2", duplicate_of: null,
-    review_status: "pending", open_flags: 3, classification: { document_type: "w2", label: null, confidence: 1, probabilities: {}, model: "headings" },
-    text_layer: true, extraction_model: "fake", approved_by: null, approved_at: null, flags: [], checks, checked: 0, total: checks.length,
-    corrected_fields: {},
-  };
-}
-
-export function document(forms: FormDetail[] = [], id = "d1", title = "w2"): DocumentDetail {
+export function document(id = "d1", title = "handbook"): DocumentDetail {
   return {
     id, title, type: "pdf", media_type: "application/pdf", length_bytes: 1000, location: `${title}.pdf`, content_hash: "0".repeat(64),
-    client: null, tax_year: null, created_at: "2026-01-01T00:00:00Z", chunks: 1, document_types: ["w2"], page_count: 1,
-    review_status: forms.length ? "pending" : null, forms_pending: forms.length, forms_approved: 0,
-    open_flags: forms.reduce((n, f) => n + f.open_flags, 0), pages: [{ n: 1, width: 612, height: 792 }],
-    forms: forms.map(({ id, index, status, pages, document_type, form_name, duplicate_of, review_status, open_flags }) => ({
-      id, index, status, pages, document_type, form_name, duplicate_of, review_status, open_flags,
-    })),
+    created_at: "2026-01-01T00:00:00Z", chunks: 2, page_count: 1, pages: [{ n: 1, width: 612, height: 792 }],
   };
 }
 

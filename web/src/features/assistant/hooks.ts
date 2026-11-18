@@ -8,15 +8,15 @@ const MAX_ROWS = 8;
 
 /**
  * The question (the textarea grows to `MAX_ROWS` lines), sending (Enter sends, Shift+Enter breaks the line; not
- * while an answer or an upload is pending), and adding documents to the scope: an upload with the scope's client
- * and year is attached once stored.
+ * while an answer or an upload is pending), and adding documents to the scope: an upload is attached once
+ * stored.
  */
 export function useComposer(autoFocus?: boolean) {
   const { ask, pending, stop, scope, setScope } = useAssistant();
   const [text, setText] = useState("");
   const area = useRef<HTMLTextAreaElement>(null);
   const upload = useUploadDocument();
-  const uploading = upload.isPending ? (upload.variables?.file.name ?? "") : null;
+  const uploading = upload.isPending ? (upload.variables?.name ?? "") : null;
   const canSend = text.trim() !== "" && !pending && uploading === null;
 
   useLayoutEffect(() => {
@@ -52,12 +52,7 @@ export function useComposer(autoFocus?: boolean) {
   };
 
   const uploadFile = (file: File) =>
-    upload.mutate(
-      { file, client: scope.client, tax_year: scope.tax_year },
-      {
-        onSuccess: (doc) => attach({ id: doc.id, title: doc.title }),
-      },
-    );
+    upload.mutate(file, { onSuccess: (doc) => attach({ id: doc.id, title: doc.title }) });
 
   return { text, setText, area, submit, keyDown, attach, uploadFile, upload, uploading, canSend, pending, stop, scope, setScope };
 }

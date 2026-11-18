@@ -88,7 +88,7 @@ export function usePartnerConversation() {
 }
 
 /**
- * Files dropped on the page or picked with "+": each is stored with `extract=false` (one after another), then,
+ * Files dropped on the page or picked with "+": each is stored (one after another), then,
  * once the partner is free, one message lists what was uploaded (ids and titles) so it organizes them.
  */
 export function usePartnerUploads(ask: (text: string) => void, busy: boolean) {
@@ -109,7 +109,7 @@ export function usePartnerUploads(ask: (text: string) => void, busy: boolean) {
     for (const [i, file] of list.entries()) {
       const id = first + i;
       try {
-        const doc = await upload.mutateAsync({ file, extract: false });
+        const doc = await upload.mutateAsync(file);
         setDone((all) => [...all, { id: doc.id, title: doc.title }]);
         setStates((all) => all.filter((s) => s.id !== id));
       } catch (error) {

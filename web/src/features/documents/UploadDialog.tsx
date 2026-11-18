@@ -1,10 +1,8 @@
 import { CheckCircle2, CircleAlert, FileUp, X } from "lucide-react";
 import { useRef, useState, type DragEvent } from "react";
 import { Link } from "react-router";
-import { useStats } from "../../api/library";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
-import { Field, Input } from "../../components/Field";
 import { Spinner } from "../../components/Spinner";
 import { formatBytes, plural } from "../../lib/format";
 import { useUploadQueue, type UploadItem } from "./hooks";
@@ -12,12 +10,9 @@ import styles from "./UploadDialog.module.css";
 
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp,.txt,.md,.csv,.xlsx";
 
-/** Files are sent one at a time (the API processes uploads one per extraction slot); each shows its own result. */
+/** Files are sent one at a time (the API reads and indexes one document per upload slot); each shows its own result. */
 export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const clients = useStats().data?.clients.flatMap((c) => (c.client ? [c.client] : [])) ?? [];
   const { items, add, remove, start, clear, running, remaining } = useUploadQueue();
-  const [client, setClient] = useState("");
-  const [year, setYear] = useState("");
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
@@ -44,26 +39,17 @@ export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => 
           <Button onClick={close} disabled={running}>
             {items.length > 0 && remaining === 0 ? "Done" : "Cancel"}
           </Button>
-          <Button variant="primary" onClick={() => start(client, year)} loading={running} disabled={remaining === 0}>
+          <Button variant="primary" onClick={start} loading={running} disabled={remaining === 0}>
             {remaining > 0 ? `Upload ${plural(remaining, "file")}` : "Upload"}
           </Button>
         </>
       }
     >
       <div className={styles.body}>
-        <div className={styles.fields}>
-          <Field label="Client" hint="Applies to every file in this upload.">
-            <Input value={client} onChange={(e) => setClient(e.target.value)} list="upload-clients" placeholder="e.g. Gonzalez" disabled={running} />
-            <datalist id="upload-clients">
-              {clients.map((c) => (
-                <option key={c} value={c} />
-              ))}
-            </datalist>
-          </Field>
-          <Field label="Tax year" hint="Used when the form has none.">
-            <Input value={year} onChange={(e) => setYear(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" placeholder="e.g. 2025" disabled={running} />
-          </Field>
-        </div>
+        <p className="muted">
+          Every file becomes searchable knowledge at once. To have the partner read new documents and file them into the business profile, upload them on
+          the Partner page instead.
+        </p>
         <button
           type="button"
           className={`${styles.drop} ${dragging ? styles.dragging : ""}`}
@@ -108,7 +94,7 @@ export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => 
                 )}
                 {item.result && (
                   <Link to={`/documents/${item.result.id}`} onClick={close} className={styles.open}>
-                    Review
+                    Open
                   </Link>
                 )}
               </li>
@@ -128,16 +114,11 @@ function ItemIcon({ state }: { state: UploadItem["state"] }) {
 }
 
 function ItemDetail({ item }: { item: UploadItem }) {
-  if (item.state === "uploading") return <>Extracting forms…</>;
+  if (item.state === "uploading") return <>Reading and indexing…</>;
   if (item.state === "failed") return <span className={styles.failed}>{item.error}</span>;
   if (item.result) {
-    const extracted = item.result.forms.filter((f) => f.status === "ok").length;
-    return (
-      <>
-        {item.result.forms.length ? plural(extracted, "form") + " extracted" : "Stored as text"}
-        {item.result.open_flags > 0 && ` · ${plural(item.result.open_flags, "flagged field")}`}
-      </>
-    );
+    const pages = item.result.page_count ? `${plural(item.result.page_count, "page")} · ` : "";
+    return <>{pages}{plural(item.result.chunks, "passage")} indexed</>;
   }
   return <>{formatBytes(item.file.size)} · waiting</>;
 }

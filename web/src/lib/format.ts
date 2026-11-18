@@ -1,7 +1,4 @@
-/** Display formatting. Values arrive normalised by the API (amounts as numbers, dates as YYYY-MM-DD). */
-import type { FieldKind, Scalar } from "../api/types";
-
-const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+/** Display formatting: counts, dates, relative times, file sizes, plurals. */
 const integer = new Intl.NumberFormat("en-US");
 const dateFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
 const dateTimeFormat = new Intl.DateTimeFormat("en-US", {
@@ -13,18 +10,6 @@ const dateTimeFormat = new Intl.DateTimeFormat("en-US", {
 });
 
 export const formatCount = (n: number) => integer.format(n);
-
-/** A check value as shown to a reviewer; null -> "" (the caller shows an empty state). */
-export function formatValue(kind: FieldKind, value: Scalar): string {
-  if (value === null || value === "") return "";
-  if (kind === "check") return value === true ? "Checked" : value === false ? "Unchecked" : String(value);
-  if (kind === "money" && typeof value === "number") return money.format(value);
-  if (kind === "percent" && typeof value === "number") return `${value}%`;
-  if (kind === "date" && typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return dateFormat.format(new Date(`${value}T00:00:00`));
-  }
-  return String(value);
-}
 
 export function formatDate(iso: string): string {
   return dateFormat.format(new Date(iso));

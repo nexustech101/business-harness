@@ -1,6 +1,6 @@
 # Dashboard (`web/`)
 
-React 19 + TypeScript (strict) single-page app of the business partner product ("Business Partner", the constant `PRODUCT` in [src/app/product.ts](src/app/product.ts)): the workspace dashboard, the partner chat, assistants and their approvals, the notes board, the business profile, the document library with its review workspace and document Q&A, the plugins page (the connector store) and settings. Built with Vite to `web/dist`, which the API serves at `/` ([api/web.py](../api/web.py)). Every API type is generated from [src/api/openapi.json](src/api/openapi.json).
+React 19 + TypeScript (strict) single-page app of the business partner product ("Business Partner", the constant `PRODUCT` in [src/app/product.ts](src/app/product.ts)): the workspace dashboard, the partner chat, assistants and their approvals, the notes board, the business profile, the document library with a page viewer and document Q&A, the plugins page (the connector store) and settings. Built with Vite to `web/dist`, which the API serves at `/` ([api/web.py](../api/web.py)). Every API type is generated from [src/api/openapi.json](src/api/openapi.json).
 
 ## Commands
 
@@ -33,7 +33,7 @@ Styling is plain CSS: CSS modules next to each component (`Button.module.css`), 
 | `/notes` | `features/notes` | Operations | Shared notes board by topic |
 | `/profile` | `features/profile` | Knowledge (expandable: Departments, Roles, Tools, Information flows -> `/profile#<id>`) | Business profile, organized documents |
 | `/knowledge` | `features/knowledge` | Knowledge | The index by source (`?view=all\|files\|workspace\|unused`, `?source=<id>` opens its passages), totals with what was never retrieved, and search over files and workspace records |
-| `/documents`, `/documents/overview`, `/documents/:id` | `features/documents`, `features/overview`, `features/review` | Knowledge (Documents) | Library list and upload; library stats ("Overview" link on the list); review workspace (full bleed) |
+| `/documents`, `/documents/:id` | `features/documents` | Knowledge (Documents) | Library list (title search, how each is filed) and upload; one document: page images beside its passages (`?page=<n>`) |
 | `/assistant` | `features/assistant` | Knowledge ("Ask documents") | Document Q&A (full bleed; also the slide-over panel) |
 | `/connectors` | `features/connectors` | Connect ("Plugins") | Installed connectors and the store: search, category pills (Storage first; a listing also matches its `also_in`), then built-in apps, featured and the rest, or one list of matches. A card shows the `tagline`; the add dialog the setup text. A built-in listing asks for a name only and opens `/databases` |
 | `/databases` | `features/databases` | Connect | The owner's workspace databases (`?db=<connector id>&table=<name>`): tables, a page of rows with add / edit / delete, CSV import and export, a SQL console (changes only with "Allow this statement to change data") |
@@ -45,10 +45,10 @@ Styling is plain CSS: CSS modules next to each component (`Button.module.css`), 
 2. Add one line to `pages` in [src/features/index.ts](src/features/index.ts):
 
    ```ts
-   { path: "/clients", label: "Clients", icon: Users, component: ClientsPage, section: "Operations" },
+   { path: "/suppliers", label: "Suppliers", icon: Truck, component: SuppliersPage, section: "Operations" },
    ```
 
-Entries with a `section` (one of `SECTIONS`: Workspace, Operations, Knowledge, Connect) are listed in the sidebar under it, in array order; `icon` is a lucide-react icon. `useChildren` (a hook returning `{to, label}[]`) makes the entry expandable; `useBadge` (a hook returning a number or `undefined`) shows a count. `App.tsx` turns every entry into a route inside `Shell`; `fullBleed: true` renders it without the content padding and page scroll (partner, review and Ask documents manage their own scrolling). Start the page with `<PageHeader title=... />` and put content in `<Card>`s. Call `useScreenState({entity, detail})` with what the page shows and `track(...)` at its key interactions (see [Agentic UI](#agentic-ui)).
+Entries with a `section` (one of `SECTIONS`: Workspace, Operations, Knowledge, Connect) are listed in the sidebar under it, in array order; `icon` is a lucide-react icon. `useChildren` (a hook returning `{to, label}[]`) makes the entry expandable; `useBadge` (a hook returning a number or `undefined`) shows a count. `App.tsx` turns every entry into a route inside `Shell`; `fullBleed: true` renders it without the content padding and page scroll (partner and Ask documents manage their own scrolling). Start the page with `<PageHeader title=... />` and put content in `<Card>`s. Call `useScreenState({entity, detail})` with what the page shows and `track(...)` at its key interactions (see [Agentic UI](#agentic-ui)).
 
 ## Call a new endpoint
 
@@ -57,17 +57,17 @@ Entries with a `section` (one of `SECTIONS`: Workspace, Operations, Knowledge, C
 3. Add a hook to the resource's file in `src/api/` (or a new file):
 
    ```ts
-   export function useClientSummary(client: string) {
+   export function useSupplier(id: string) {
      return useQuery({
-       queryKey: ["clients", client],
-       queryFn: () => unwrap(api.GET("/v1/library/clients/{client}", { params: { path: { client } } })),
+       queryKey: ["suppliers", id],
+       queryFn: () => unwrap(api.GET("/v1/business/suppliers/{id}", { params: { path: { id } } })),
      });
    }
    ```
 
    `unwrap` returns `data` from the `{data}` envelope or throws `ApiError {status, code, message, details}` built from the error envelope; `ok` is for 204 and binary responses (`parseAs: "blob"`). Paths, parameters and bodies are type-checked against `schema.d.ts`.
-4. If a component needs the type by name, add an alias in `src/api/types.ts` (`Schemas["ClientSummary"]`; aliases go through openapi-fetch's `Readable`, so they match what the client returns).
-5. Mutations invalidate what they change: library writes call `invalidateLibrary` (document lists and stats); review writes also refresh the form and its document (`review.ts`). The business resources:
+4. If a component needs the type by name, add an alias in `src/api/types.ts` (`Schemas["Supplier"]`; aliases go through openapi-fetch's `Readable`, so they match what the client returns).
+5. Mutations invalidate what they change: library writes call `invalidateLibrary` (document lists, the knowledge index and the workspace summary). The business resources:
 
    | File | Query keys | Writes refetch |
    |---|---|---|
@@ -85,21 +85,9 @@ Entries with a `section` (one of `SECTIONS`: Workspace, Operations, Knowledge, C
 
 ### Documents and upload
 
-`DocumentsPage` keeps its filters (`q`, `client`, `tax_year`, `document_type`, `review_status`, `offset`) in the URL, so the overview's links (`/documents/overview`, linked as "Overview" from the list's header), the top bar search (`/documents?q=`) and reloads land on the same list; `?upload=1` opens the upload dialog. The list is `GET /v1/library/documents` (25 per page), its counts come with each row (`forms_pending`, `open_flags`, `review_status`). Upload sends the files one after another (`POST /v1/library/documents`, multipart: `file`, `client`, `tax_year`; `useUploadDocument` sends `extract=false` only when called with `extract: false`, as the partner page does; the API's default is `true`); each row shows its own result or error message (409/413/415/422/503 bodies). The queue (items, states, `start`) is `useUploadQueue` in [features/documents/hooks.ts](src/features/documents/hooks.ts); `UploadDialog` renders it. Short form names (`W-2`) come from `GET /v1/document-types` (`name`), fetched once per session (`useTypeName`).
+`DocumentsPage` keeps its title search and page (`q`, `offset`) in the URL, so the top bar search (`/documents?q=`) and reloads land on the same list; `?upload=1` opens the upload dialog. The list is `GET /v1/library/documents` (25 per page); "Filed as" comes from the partner's organized documents (`GET /v1/business/documents`). Upload sends the files one after another (`POST /v1/library/documents`, multipart `file`); each row shows its pages and passages indexed, an Open link, or the error message (409/413/415/422/503 bodies). The queue (items, states, `start`) is `useUploadQueue` in [features/documents/hooks.ts](src/features/documents/hooks.ts); `UploadDialog` renders it.
 
-### Review workspace
-
-`/documents/:id?form=<form id>&page=<n>` ([features/review](src/features/review)). State and effects are hooks in [hooks.ts](src/features/review/hooks.ts), which `ReviewPage` and `FormReview` render: `useWorkspace` (selected form, page, check and overlays from the URL; steps 1 and 5), `useRowSelection` (keeps a visible row selected and in view; `move`), `useDecide` (decisions, approval, the edited field and row errors; steps 6 and 7), `useReviewShortcuts` (the shortcuts below).
-
-1. `ReviewPage` loads the document (`GET /v1/library/documents/{id}`: pages with sizes, forms). Without `?form`, it opens the extracted form containing `?page` (assistant citations), else the first extracted form. Duplicate and unsupported forms show an explanation instead of checks.
-2. `useForm` loads `GET /v1/library/forms/{id}`: checks, form flags, progress. `FormReview` filters them (Flagged: has flags; Unchecked: no decision; All), defaulting to Flagged when the form has open flags.
-3. Pages: `usePageImage` fetches `GET .../pages/{n}?width=1600` as a blob (the route needs the key header, so no `<img src>` to the API), caches it for the session and hands out an object URL. The viewer and every crop use the same cached image.
-4. Geometry ([geometry.ts](src/features/review/geometry.ts)): `ValueSource.box` is `[left, top, right, bottom]` on a page 1000 units wide (both axes; a page is `1000 * height / width` units tall). `boxStyle` places overlays in percent of the page, so they follow the zoom; `cropStyle` sizes the page as a background image so that the box plus 12 units of padding fills at most 200 x 36 px. Checks without a source (a value not found in the page text, a removed value, an empty box) show "Not located".
-5. Selecting a check (click, `j`/`k`/arrows, or a box on the page) switches the viewer to the source page and scrolls both the row and the box into view.
-6. Decisions: `PUT /v1/library/forms/{id}/reviews/{field}` with `confirmed`, `corrected` (value from the kind-aware editor: select for checkboxes, choices and months, date input for dates, text otherwise; [values.ts](src/features/review/values.ts) catches obvious typos, the API parses and answers `422 invalid_value` with the message shown in the row) or `rejected`; Undo is `DELETE` on the same path. `useReviewField` shows the decision in the cached form at once (reviewer blank) and puts the form back if the request fails (the row shows the error); the returned check then replaces the row, and the form, document, list and stats queries refetch. After a decision the next visible row is selected.
-7. Approve is disabled, with the reason, while a flagged field has no decision; `POST .../approve` answering `409 review_incomplete` shows the message and selects the first field of `details.undecided`. An approved form shows who approved it and a Reopen button (`POST .../reopen`).
-
-Shortcuts (ignored while typing): `j`/`k` or arrows move, `c` confirm, `e` correct, `r` reject, `u` undo, `Esc` cancels an edit. `Enter` saves a correction.
+`DocumentPage` (`/documents/:id?page=<n>`): `GET /v1/library/documents/{id}`; PDFs and images show the page image (`usePageImage` fetches `GET .../pages/{n}?width=1600` as a blob, since the route needs the key header, caches it for the session and hands out an object URL) with previous / next, beside the passages as indexed (`GET /v1/knowledge/{id}/passages`, 20 more at a time, with retrieval counts; those of the page on screen are marked). Download and Delete in the header. While it is open, "Ask documents" scopes the assistant panel to it (`setCurrentDocument`). Assistant citations land here at their page.
 
 ### Shell and sidebar
 
@@ -118,7 +106,7 @@ Shortcuts (ignored while typing): `j`/`k` or arrows move, `c` confirm, `e` corre
 | `error` | any API response that is not 2xx, except the hints route | `"<METHOD> <path>"`, `{status}` |
 | `idle` | 45 s without `keydown`, `pointerdown` or `wheel` (once, re-armed by input) | `{seconds: 45}` |
 
-`useScreenState({entity, detail})` declares what the page shows (cleared on unmount); `uiState()` is `{page: <path>, entity, detail}` (`UiState`). Pages declare e.g. the review page `{entity: {kind: "document", id, title}, detail: {form, page, field}}`, an assistant `{entity: {kind: "assistant", ...}, detail: {status}}`, the store `{entity: <listing being added>, detail: {q, category, manual}}`.
+`useScreenState({entity, detail})` declares what the page shows (cleared on unmount); `uiState()` is `{page: <path>, entity, detail}` (`UiState`). Pages declare e.g. a document `{entity: {kind: "document", id, title}, detail: {page}}`, an assistant `{entity: {kind: "assistant", ...}, detail: {status}}`, the store `{entity: <listing being added>, detail: {q, category, manual}}`.
 
 Hints: 600 ms after a navigation, an idle event or a `track` call (a later one restarts the wait), `POST /v1/workspace/hints` with `{state: uiState(), events}`; only the latest request's answer is shown (each request, scheduled or not yet sent, makes answers to earlier ones stale), failures are ignored, and a navigation clears the hints on screen. `HintsBar` ([app/HintsBar.tsx](src/app/HintsBar.tsx)) shows the first (most relevant) hint in one row under the top bar (icon by `tone`, title, body, the `action` as a link, which is tracked as `hint:<id>`) with a dismiss button, and the others behind "+n more" / "Show less"; dismissed ids are kept per signed-in key in `localStorage["tda.hints.dismissed.<key id>"]` (`dismissedKey`; the last 200; storage failures ignored) and filtered out of every later answer.
 
@@ -135,7 +123,7 @@ Ask the partner: the top bar button calls `askPartner()`, which stores the curre
 1. The conversation lives in the page (lost on leaving it). Sending (Enter; Shift+Enter breaks the line; "Start the interview" sends a first message) appends the owner's message and posts the conversation: `POST /v1/partner/chat` `{messages, ui_state}` (`usePartnerChat`), where `messages` is the newest `MAX_TURNS` (50, the API's limit) turns starting at an owner turn (`recent`); the profile and interview reach the partner in the server's own state message. Stop aborts the request ("Stopped." with Retry); a failure shows its message with Retry; "New chat" clears it and drops a late reply.
 2. Answers render with the document assistant's `AssistantMessage` (Markdown, citations, sources, tool line, copy); pending shows `Thinking` ("Thinking…").
 3. The reply's `interview` replaces the cached `GET /v1/business/interview`; `profile_changed` and `assistants_changed` refetch as in [Call a new endpoint](#call-a-new-endpoint), so the top bar's business name, the sidebar's assistants and the dashboard follow.
-4. Uploads: files dropped anywhere on the page (an overlay shows while dragging files) or picked with "+" ("Upload documents") are stored one after another with `POST /v1/library/documents` (multipart, `extract=false`); a chip per file (by upload, so equal names stay apart) shows "Uploading <name>…" or the error (dismissable). Once no upload is running and the partner is not answering, one message lists them: `I uploaded 2 documents for you to organize into the business profile:\n- <title> (document id <id>)\n…` (`describeUploads`).
+4. Uploads: files dropped anywhere on the page (an overlay shows while dragging files) or picked with "+" ("Upload documents") are stored one after another with `POST /v1/library/documents` (multipart); a chip per file (by upload, so equal names stay apart) shows "Uploading <name>…" or the error (dismissable). Once no upload is running and the partner is not answering, one message lists them: `I uploaded 2 documents for you to organize into the business profile:\n- <title> (document id <id>)\n…` (`describeUploads`).
 5. Beside the chat (hidden under 1100 px): `answered / total` ("covered"), progress per area, and the next questions (`next`); clicking one sends `Ask me this next: <question>` (its `purpose` is the tooltip).
 
 ### Business profile
@@ -182,19 +170,19 @@ Organized documents: `GET /v1/business/documents`; Edit on a row turns departmen
 
 | File | Part |
 |---|---|
-| `Chat.tsx` | Empty state (page: greeting, composer, suggestion pills, "Needs review"; panel: intro and suggestion list), conversation thread, composer dock |
+| `Chat.tsx` | Empty state (page: greeting, composer, suggestion pills; panel: intro and suggestion list), conversation thread, composer dock |
 | `Composer.tsx` | Question box, "+" menu (upload, attach), scope pills or document chips, send / stop |
 | `hooks.ts` | `useComposer`: the question, auto-grow, Enter to send, upload and attach (what `Composer` renders) |
 | `Mark.tsx` | The assistant mark: an inline-SVG twisted (Möbius) loop, one ribbon segment drawn three times at 120° (hues `--mark-from` → `--mark-to`, turning to `--mark-shade` where each end tucks under the next; per-instance ids via `useId`); `busy` adds a 2.8 s sheen and breathing, static under reduced motion. Used for the nav item, Assistant buttons, greeting, answer avatar and the pending row |
 | `Message.tsx` | User bubble, answer (Markdown, citations, sources, tool line, copy), pending and failure rows; `Thinking` takes a fixed `label` and `Failure` another chat's `{error, stopped, retry}` (the partner page and the run panel reuse them) |
 | `chatUtils.ts`, `markdown.ts`, `citations.ts` | `greeting`, `isNearBottom`, `describeTool`; the Markdown subset; `[n]` citations |
 
-1. Scope: `{client?, tax_year?, documents[]}`, sent as `toFilters(scope)` (`client`, `tax_year`, `document_ids`). The composer shows "All clients" / "Any year" pills (clients from `GET /v1/library/stats`, the last eight years) or, once documents are attached, a chip per document; attaching clears client and year, since all filters must match. Opening the panel on a review page scopes it to that document (the page registers it with `setCurrentDocument`).
-2. "+" menu: "Upload a document" uploads one file with `useUploadDocument` (the scope's client and year; a chip shows "Uploading…", errors show in the composer) and attaches the result; "Attach a library document" searches `GET /v1/library/documents?q=` (8 results; Enter picks the first) and attaches the pick. Menus are `components/Menu.tsx`: arrows, Home and End move, Esc closes and refocuses the trigger, Tab or a click outside closes.
+1. Scope: `{documents[]}`, sent as `toFilters(scope)` (`document_ids`; none: everything the key may read). Attached documents show as chips. Opening the panel on a document page scopes it to that document (the page registers it with `setCurrentDocument`).
+2. "+" menu: "Upload a document" uploads one file with `useUploadDocument` (a chip shows "Uploading…", errors show in the composer) and attaches the result; "Attach a library document" searches `GET /v1/library/documents?q=` (8 results; Enter picks the first) and attaches the pick. Menus are `components/Menu.tsx`: arrows, Home and End move, Esc closes and refocuses the trigger, Tab or a click outside closes.
 3. Sending (Enter; Shift+Enter breaks the line; the textarea grows to 8 rows) appends the question and posts the whole conversation and the scope to `POST /v1/assistant/chat` (the API is stateless). While it runs, Send becomes Stop (aborts the request; "Stopped." with Retry) and the thread shows "Searching documents…" ("Reading <title>…" with one attached document) with the elapsed seconds after 5 s: the API answers once, so the wording follows the scope, not live tool progress. A failure shows its message with Retry, which resends the conversation.
-4. An answer is parsed by `parseMarkdown` (paragraphs, headings, lists, fenced code, bold, inline code; rendered as elements, never as HTML). `[n]` becomes a citation chip (only numbers present in `sources`; hover or focus shows title and page). Below: "Sources" cards for the cited excerpts (title, form name, page), the other retrieved excerpts behind "+n more retrieved", the tool line (`describeTool`, e.g. `Searched “wages” · Read w2`; expands to each call's name and arguments) and Copy. A citation or source opens `/documents/<document_id>?page=<page_number>`.
+4. An answer is parsed by `parseMarkdown` (paragraphs, headings, lists, fenced code, bold, inline code; rendered as elements, never as HTML). `[n]` becomes a citation chip (only numbers present in `sources`; hover or focus shows title and page). Below: "Sources" cards for the cited excerpts (title, page or sheet, else section), the other retrieved excerpts behind "+n more retrieved", the tool line (`describeTool`, e.g. `Searched “refunds” · Read handbook`; expands to each call's name and arguments) and Copy. A citation or source opens `/documents/<document_id>` (with `?page=<page_number>` when it has one).
 5. The thread keeps the newest message in view unless the user scrolled more than 80 px up (`isNearBottom`, also on resize); sending always returns to the end. "New chat" (page top-right, panel header; shown once there is a conversation) aborts a running request and clears the turns; a late reply is dropped.
-6. Empty page: "Needs review" lists up to three documents from `GET /v1/library/documents?review_status=pending` with open flags; a card asks "What still needs review in this document?" scoped to it. Suggestions switch to document questions while documents are attached.
+6. Empty page: suggestion pills about the business (what is on file, who does what, goals); they switch to document questions (summarize, key figures, obligations) while documents are attached.
 
 ## Theming
 
@@ -209,42 +197,40 @@ Tokens are CSS custom properties in [src/styles/tokens.css](src/styles/tokens.cs
 | Text | `--text`, `--text-2`, `--text-3` (4.5:1 or more on every surface token in both themes), `--text-on-accent` |
 | Accent | `--accent`, `--accent-hover`, `--accent-text`, `--accent-soft`, `--accent-border`, `--focus-ring` |
 | States | `--success`, `--warning`, `--danger`, `--info`, each with `-soft` and `-border` |
-| Page overlays | `--box`, `--box-flag`, `--box-done`, `--box-selected`, each with `-fill` |
+| Progress | `--box`, `--box-flag`, `--box-done`, `--box-selected`, each with `-fill` (progress bars) |
 | Layout | `--sidebar` 240 px, `--sidebar-rail` 68 px (collapsed), `--topbar` 56 px |
 | Sidebar | `--nav-bg` (light white, dark `#0b0e1d` navy), `--nav-border`, `--nav-text`, `--nav-text-muted` (section labels, children), `--nav-hover`, `--nav-active` / `--nav-active-text` (the active pill: light `#0c0e16` on white text, dark the lighter navy `#252a48`), `--nav-toggle-on` / `--nav-toggle-on-text` (the selected sun/moon) |
 
-Statuses map to a label and tone in [src/lib/status.ts](src/lib/status.ts) (assistants: active `success`, draft `neutral`, paused `warning`; connectors: connected `success`, needs_auth `warning`, error `danger`, untested `neutral`; approvals: pending `warning`, executing ("Running") `info`, executed `success`, rejected `neutral`, failed `danger`; tool runs: ran `success`, pending_approval `warning`, denied and failed `danger`). Tones map to meaning in [src/lib/flags.ts](src/lib/flags.ts): removed values (`not_printed`, `wrong_label`, `unparseable`, `no_output`) are `danger`, values to double-check `warning`, form-level facts `info`; decisions are confirmed `success`, corrected `accent`, rejected `danger`. Amounts use `.num` (tabular numerals).
+Statuses map to a label and tone in [src/lib/status.ts](src/lib/status.ts) (assistants: active `success`, draft `neutral`, paused `warning`; connectors: connected `success`, needs_auth `warning`, error `danger`, untested `neutral`; approvals: pending `warning`, executing ("Running") `info`, executed `success`, rejected `neutral`, failed `danger`; tool runs: ran `success`, pending_approval `warning`, denied and failed `danger`). The `Tone` type (`neutral`, `accent`, `success`, `warning`, `danger`, `info`) is in [src/lib/tone.ts](src/lib/tone.ts). Amounts use `.num` (tabular numerals).
 
 ## Tests
 
-Unit and component tests (Vitest, `npm test`). Tests run in Node; a component test starts with `// @vitest-environment jsdom` and renders with Testing Library. [src/test/api.ts](src/test/api.ts) (the setup file in `vite.config.ts`) fakes the API behind `fetch` for those: `serve(handler)` answers every request (`json`, `apiError`, `deferred` to hold one open, `sentForm` for multipart bodies) and adds what jsdom lacks (`<dialog>` methods, `scrollIntoView`, object URLs); [src/test/fixtures.ts](src/test/fixtures.ts) has a W-2 `FormDetail`, a `DocumentDetail`, the assistant spec's JSON Schema as the API returns it (`specSchema`), and `workspace`, `assistant`, `listing`, `connector`, `approval` builders. [src/test/app.tsx](src/test/app.tsx) `renderApp(path, routes)` renders the signed-in app (providers, `MemoryRouter` at `path`, `Routed`) on the fake API: `routes(route, sent)` answers `"<METHOD> <path>"` (undefined falls through to defaults for `/auth/me`, `/v1/workspace`, hints (none), assistants (none), the interview and document types; anything else is a 404); `sent(route)` lists the requests with their JSON bodies.
+Unit and component tests (Vitest, `npm test`). Tests run in Node; a component test starts with `// @vitest-environment jsdom` and renders with Testing Library. [src/test/api.ts](src/test/api.ts) (the setup file in `vite.config.ts`) fakes the API behind `fetch` for those: `serve(handler)` answers every request (`json`, `apiError`, `deferred` to hold one open, `sentForm` for multipart bodies) and adds what jsdom lacks (`<dialog>` methods, `scrollIntoView`, object URLs); [src/test/fixtures.ts](src/test/fixtures.ts) has a `DocumentDetail` (`document`), the assistant spec's JSON Schema as the API returns it (`specSchema`), and `workspace`, `assistant`, `listing`, `connector`, `approval` builders. [src/test/app.tsx](src/test/app.tsx) `renderApp(path, routes)` renders the signed-in app (providers, `MemoryRouter` at `path`, `Routed`) on the fake API: `routes(route, sent)` answers `"<METHOD> <path>"` (undefined falls through to defaults for `/auth/me`, `/v1/workspace`, hints (none), assistants (none), the interview and an empty knowledge index; anything else is a 404); `sent(route)` lists the requests with their JSON bodies.
 
 | File | Covers |
 |---|---|
-| `src/features/review/values.test.ts` | Corrected-value parsing per kind, editor start values |
-| `src/features/review/geometry.test.ts` | Box placement in percent, crops with padding and clamping |
 | `src/features/assistant/citations.test.ts` | `[n]` / `[1, 2]` citations, unknown numbers left as text |
 | `src/features/assistant/markdown.test.ts` | Paragraphs, lists with continuations, headings, fenced code, bold and code spans, HTML kept as text |
 | `src/features/assistant/chatUtils.test.ts` | Greeting by hour, scroll stickiness threshold, tool-call wording |
 | `src/api/schema.test.ts` | `schema.d.ts` is current with `openapi.json` |
 | `src/filenames.test.ts` | No two modules differ only in case (Windows and macOS ignore case, so `./Chat` could load `chat.ts`) |
-| `src/features/review/FormReview.test.tsx` | Keyboard flow: move, confirm, correct (Enter), reject, undo; Approve disabled with its reason until every flag is decided, then approved; a refused approval selects the field it names |
-| `src/api/review.test.tsx` | `useReviewField`: the decision shows at once, then the API's check; a refused decision puts the form back |
-| `src/features/documents/UploadDialog.test.tsx` | Upload dialog: queued, remove, one upload at a time, uploading, done (forms and flags, Review link), failed (API message), retry of failed files only, client and year sent |
+| `src/features/documents/UploadDialog.test.tsx` | Upload dialog: queued, remove, one upload at a time, uploading, done (pages and passages indexed, Open link), failed (API message), retry of failed files only |
+| `src/features/knowledge/KnowledgePage.test.tsx` | The map: sources with what was never retrieved, the unread filter, a source's passages; search with the sources matched but not shown; a hit opens its source |
+| `src/features/databases/DatabasesPage.test.tsx` | Typed values and identifiers; no database yet -> create and open; rows, add with typed values, a refused edit, SQL |
 | `src/features/assistants/specSchema.test.ts` | Spec validation: template and minimal spec valid; invalid JSON; required, types, lengths, ranges, unknown fields; `$ref`, `anyOf`, `items`, enums, `additionalProperties` schemas, with paths |
 | `src/app/Sidebar.test.tsx` | Sections and item order, active item, pending badge, expandable groups (active assistants only, profile sections), business and key name; collapse to the icon rail and back (remembered); theme toggle |
 | `src/app/HintsBar.test.tsx` | Hints requested after each navigation with the screen state and events; a dismissed hint is stored and stays hidden in later answers; the first hint shows, the rest behind "+n more"; tracked actions and API errors become events and trigger a request |
 | `src/features/assistants/AssistantsPage.test.tsx` | Create flow: template, invalid JSON and schema errors inline, Create disabled until valid, the POSTed spec, the new assistant's page (status, context); policy editor (write tools only, per-tool override saved in the spec) and run panel (outcome per tool run, approvals link); Ctrl+Enter during a run does not start a second one |
 | `src/features/approvals/ApprovalsPage.test.tsx` | Pending cards (arguments, reason); Always allow and Reject with a note send their decisions; the list empties; history shows who decided |
 | `src/features/connectors/ConnectorsPage.test.tsx` | `?add=` opens the listing's dialog; bearer token required and sent; the installed row; manual add (SSE), stdio (no auth, args per line, API refusal shown), OAuth listing (optional client, then Sign in) |
-| `src/features/partner/PartnerPage.test.tsx` | "Ask the partner" attaches the previous screen's `ui_state`, later messages send the partner page's; the conversation is sent (at most the newest 50 turns, starting with the owner's: `recent`); `profile_changed` refetches the workspace (business name); uploads use `extract=false`, then one message lists ids and titles; a next question asks |
+| `src/features/partner/PartnerPage.test.tsx` | "Ask the partner" attaches the previous screen's `ui_state`, later messages send the partner page's; the conversation is sent (at most the newest 50 turns, starting with the owner's: `recent`); `profile_changed` refetches the workspace (business name); uploads are stored, then one message lists ids and titles; a next question asks |
 | `src/app/SignIn.test.tsx` | Sign-in: a refused key shows the reason and is not stored; a valid key is sent and remembered; a later 401 signs out with a notice and empties the cache; a stored key is checked first |
 
 ### E2E
 
 `npm run e2e` builds, then [e2e/global-setup.ts](e2e/global-setup.ts) runs `uv run --no-sync python -m tests.e2e.stack` from the repository root with a fresh temporary data directory (API on `E2E_API_PORT`, default 8765; fake models on `E2E_MODELS_PORT`, default the next port), serving the new `web/dist`, waits for `/health` to report `ok` (Docling loads first) and stops it after the run (its process group; `taskkill /T` on Windows). It sets `HF_HUB_OFFLINE=1` unless the environment says otherwise; set `HF_HUB_CACHE` (or `DOCLING_ARTIFACTS_PATH`) when Docling's weights are not in the default cache. Playwright is pinned to 1.63.0 to match the installed Chromium; `npx playwright install chromium` provides one elsewhere.
 
-[e2e/dashboard.spec.ts](e2e/dashboard.spec.ts) is one test in steps: wrong key refused and sign-in (lands on the Dashboard); Documents, upload `tests/samples/w2.pdf` and `stack.pdf` for a client; document overview (`/documents/overview`) counts (2 documents, 4 forms, 4 awaiting review, 8 open flags); W-2 review: Approve disabled with its reason, confirm, correct (Enter), reject and undo by keyboard, approve; dark theme from the sidebar toggle kept after reload; document assistant panel ("Ask documents"): an answer with a search tool line, a citation, and a source that opens the document at its page; Ask documents page: the same conversation, a `list_documents` question sent with Enter, New chat back to the greeting; delete with confirmation. The business pages are covered by the component tests only.
+[e2e/dashboard.spec.ts](e2e/dashboard.spec.ts) is one test in steps: wrong key refused and sign-in (lands on the Dashboard); Documents, upload a Markdown handbook and a CSV price list (written to a temporary folder by the test), each with its passages indexed and "Not filed yet"; open the handbook: its passages, never retrieved; dark theme from the sidebar toggle kept after reload; document assistant panel ("Ask documents"): an answer with a search tool line, a citation, an answer quoting the handbook, and a source that opens the document; Ask documents page: the same conversation, a `list_documents` question sent with Enter, New chat back to the greeting; delete with confirmation. The business pages are covered by the component tests only.
 
 ## Dependencies
 

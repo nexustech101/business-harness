@@ -15,7 +15,7 @@ export function isNearBottom(el: { scrollTop: number; scrollHeight: number; clie
   return el.scrollHeight - el.scrollTop - el.clientHeight <= slack;
 }
 
-/** One tool call in words, e.g. `Searched “wages”`, `Read w2`; `titles` maps document ids to titles. */
+/** One tool call in words, e.g. `Searched “refunds”`, `Read handbook`; `titles` maps document ids to titles. */
 export function describeTool(call: ToolCall, titles: Map<string, string>): string {
   const args = call.arguments as Record<string, unknown>;
   const id = typeof args.document_id === "string" ? args.document_id : null;
@@ -25,12 +25,10 @@ export function describeTool(call: ToolCall, titles: Map<string, string>): strin
       return typeof args.query === "string" && args.query.trim() ? `Searched “${clip(args.query.trim())}”` : "Searched documents";
     case "list_documents":
       return "Listed documents";
-    case "get_document":
+    case "browse_knowledge":
+      return "Browsed the knowledge index";
+    case "read_document":
       return `Read ${doc}`;
-    case "classify_document":
-      return `Classified ${doc}`;
-    case "extract_document":
-      return `Re-extracted ${doc}`;
     default:
       return `Ran ${call.name}`;
   }
