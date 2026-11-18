@@ -33,9 +33,10 @@ import asyncio
 import json
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from types import UnionType
+from typing import TYPE_CHECKING, Union, get_args, get_origin
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from agent.agent import ToolCall, tool_loop
 from agent.schema import ChatMessage, ToolCallInfo
@@ -90,6 +91,56 @@ def merge_patch(target, patch):
     return result
 
 
+def as_text(value: object) -> object:
+    """An object or list sent where text belongs, as one line: its values, comma separated. Other values as is."""
+    if isinstance(value, dict):
+        value = list(value.values())
+    if isinstance(value, list):
+        return ", ".join(str(part) for part in map(as_text, value) if part not in (None, ""))
+    return value
+
+
+def _shape(annotation: object) -> object:
+    """"text" (str), "texts" (list[str]), a model class, a one-tuple (list of that model), or None (leave as is)."""
+    args = [a for a in get_args(annotation) if a is not type(None)]
+    if get_origin(annotation) in (Union, UnionType) and len(args) == 1:
+        annotation, args = args[0], list(get_args(args[0]))
+    if annotation is str:
+        return "text"
+    if get_origin(annotation) is list and args:
+        if args[0] is str:
+            return "texts"
+        if isinstance(args[0], type) and issubclass(args[0], BaseModel):
+            return (args[0],)
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation
+    return None
+
+
+def lenient(data: object, model: type[BaseModel]) -> object:
+    """`data` with text where `model` wants text. Small models often send `{"name": ..., "purpose": ...}` or a list
+    for a text field or as the items of a list of strings: those become one line (`as_text`), and a single string
+    sent for a list of strings becomes a one-item list. Nested models are walked; the rest is left to validation."""
+    if not isinstance(data, dict):
+        return data
+    out = dict(data)
+    for name, field in model.model_fields.items():
+        if name not in out:
+            continue
+        value, shape = out[name], _shape(field.annotation)
+        if shape == "text" and isinstance(value, dict | list):
+            out[name] = as_text(value)
+        elif shape == "texts" and isinstance(value, str):
+            out[name] = [value]
+        elif shape == "texts" and isinstance(value, list):
+            out[name] = [as_text(item) for item in value]
+        elif isinstance(shape, tuple) and isinstance(value, list):
+            out[name] = [lenient(item, shape[0]) for item in value]
+        elif isinstance(shape, type):
+            out[name] = lenient(value, shape)
+    return out
+
+
 def _invalid(exc: ValidationError) -> str:
     return "error: invalid: " + "; ".join(f"{'.'.join(map(str, e['loc'])) or 'value'}: {e['msg']}"
                                           for e in exc.errors()[:5])
@@ -137,14 +188,15 @@ async def record_answer(args: dict, ctx: PartnerContext) -> str:
               "people[], duties[], tools[], reports_to}], tools[{name, category, used_for, departments[], "
               "listing_id (store listing id from recommend_connectors)}], flows[{source, target, what, cadence, "
               "via}], financials{revenue_streams[], "
-              "cost_centers[], pricing, currency, fiscal_year_end, accounting_method: cash|accrual}, compliance[].",
+              "cost_centers[], pricing, currency, fiscal_year_end, accounting_method: cash|accrual}, compliance[]. "
+              "A list shown without {...} holds plain strings, e.g. \"compliance\": [\"Food service license\"].",
               {"type": "object", "properties": {"patch": {"type": "object"}}, "required": ["patch"]})
 async def update_profile(args: dict, ctx: PartnerContext) -> str:
     patch = args.get("patch")
     if not isinstance(patch, dict) or not patch:
         return "error: `patch` must be a non-empty object"
     current = await asyncio.to_thread(ctx.business.profile, ctx.owner)
-    merged = merge_patch(current.model_dump(mode="json", exclude={"updated_at"}), patch)
+    merged = lenient(merge_patch(current.model_dump(mode="json", exclude={"updated_at"}), patch), BusinessProfile)
     merged.pop("updated_at", None)
     try:
         profile = BusinessProfile.model_validate(merged)

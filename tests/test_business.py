@@ -12,7 +12,7 @@ from business.config import ContextBudgets
 from business.context import build_context, fit
 from business.errors import InvalidSpec, OutdatedWorkspace
 from business.hints import Workspace, hints, page_pattern, recommendations
-from business.partner import merge_patch
+from business.partner import lenient, merge_patch
 from business.questions import QUESTIONS, REQUIRED, covered, interview_state
 from business.schema import (
     AnswerRequest,
@@ -90,6 +90,23 @@ def test_merge_patch_merges_objects_replaces_lists_and_removes_nulls():
     patch = {"financials": {"pricing": None, "accounting_method": "cash"}, "goals": ["y", "z"], "name": None}
     assert merge_patch(target, patch) == {"financials": {"currency": "USD", "accounting_method": "cash"},
                                           "goals": ["y", "z"]}
+
+
+def test_lenient_turns_objects_into_text_where_the_profile_wants_text():
+    sent = {"customers": [{"name": "six restaurants", "type": "wholesale"}, {"name": "walk-ins"}],
+            "compliance": [{"regulation": "local health code", "type": "food safety"}, "sales tax"],
+            "goals": "open a second shop", "team_size": 9,
+            "roles": [{"title": "Bookkeeper", "people": "Tom", "duties": [{"task": "payroll", "when": "Friday"}]}],
+            "financials": {"pricing": {"wholesale": "cost plus 40%"}, "accounting_method": "cash"}}
+    profile = BusinessProfile.model_validate(lenient(sent, BusinessProfile))
+    assert profile.customers == "six restaurants, wholesale, walk-ins"
+    assert profile.compliance == ["local health code, food safety", "sales tax"]
+    assert profile.goals == ["open a second shop"] and profile.team_size == 9
+    assert profile.roles[0].people == ["Tom"] and profile.roles[0].duties == ["payroll, Friday"]
+    assert profile.financials.pricing == "cost plus 40%" and profile.financials.accounting_method == "cash"
+    # Shapes it cannot read as text are left for validation to report.
+    assert lenient({"team_size": "nine", "roles": [{"name": "x"}]}, BusinessProfile) == {"team_size": "nine",
+                                                                                       "roles": [{"name": "x"}]}
 
 
 def test_profile_answers_and_owner_isolation(tmp_path):
