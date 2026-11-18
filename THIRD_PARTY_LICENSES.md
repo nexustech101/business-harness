@@ -2,7 +2,7 @@
 
 What this project runs on, under which license, and what that means when the
 system is delivered to a client. The project's own code (`api/`, `core/`,
-`library/`, `agent/`, `scripts/`, `tests/`, `n8n/`, `web/`) is not covered here; its owner sets its license.
+`library/`, `agent/`, `business/`, `scripts/`, `tests/`, `web/`) is not covered here; its owner sets its license.
 
 Versions are the ones locked in `uv.lock` and `web/package-lock.json`. Licenses are taken from each
 package's own metadata and license files (regenerate the list with the
@@ -15,8 +15,7 @@ command at the end), and from the model cards for model weights.
 | Python packages | None found. All are permissive (MIT, BSD, Apache-2.0, PSF, MIT-CMU). Keep their notices when you redistribute them. |
 | Dashboard (npm) packages | None found. MIT and ISC; the bundled Inter font is OFL-1.1. `web/dist` contains their code: keep their notices when you deliver it. |
 | Docling layout model, RapidOCR models, Qwen3.5, nomic-embed-text | None found. Apache-2.0. |
-| **tev1** (classifier) | **Unresolved.** The publisher's model card says the weights' release license "is being finalized"; the model is labelled experimental. See [tev1](#tev1). Set `TEV_MODEL=none` to run without it. |
-| **n8n** | **Conditions apply.** Sustainable Use License: you may build and maintain workflows for a client on *their* n8n; you may not host n8n for clients so they can build workflows. See [n8n](#n8n). |
+| Connected services (MCP connectors) | Their own terms. Each connector is the client's account with that provider. See [Connectors](#connectors). |
 
 ## Python packages (runtime)
 
@@ -30,10 +29,8 @@ Direct dependencies (`pyproject.toml`):
 | uvicorn | 0.54.0 | BSD-3-Clause | ASGI server |
 | pydantic-settings | 2.16.1 | MIT | `.env` / environment settings |
 | python-multipart | 0.0.32 | Apache-2.0 | File uploads |
-| ollama | 0.6.3 | MIT | Client for the local models |
 | onnxruntime | 1.31.1 | MIT | Runs the OCR models |
 | openpyxl | 3.1.5 | MIT | Reading .xlsx files into the document library |
-| opencv-python-headless | 5.0.0.93 | Apache-2.0 (bundles third-party code, see its `LICENSE-3RD-PARTY.txt`) | Checkbox and cell-rule detection |
 | numpy | 2.5.4 | BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0 | Page images |
 | pillow | 13.0.0 | MIT-CMU | Image decoding |
 | pypdfium2 | 5.14.0 | BSD-3-Clause, Apache-2.0 (PDFium) | PDF text layer, page rendering |
@@ -41,6 +38,8 @@ Direct dependencies (`pyproject.toml`):
 | registers | 7.5.0 | MIT | API-key store |
 | sqlmodel | 0.0.48 | MIT | Database layer under `registers` |
 | typing-extensions | 4.16.0 | PSF-2.0 | Typing back-ports |
+| mcp | 2.3.0 | MIT | MCP client for connectors |
+| cryptography | 50.0.2 | Apache-2.0 OR BSD-3-Clause | Fernet encryption of connector tokens |
 
 Notable packages installed with the above:
 
@@ -48,6 +47,7 @@ Notable packages installed with the above:
 |---|---|---|
 | docling-core / docling-parse / docling-ibm-models | 2.104.0 / 7.23.1 / 4.0.4 | MIT |
 | rapidocr | 3.10.0 | Apache-2.0 (code); bundled OCR models: see below |
+| opencv-python-headless (with rapidocr) | 5.0.0.93 | Apache-2.0 (bundles third-party code, see its `LICENSE-3RD-PARTY.txt`) |
 | torch / torchvision | 2.14.1 / 0.29.1 | Apache-2.0 AND BSD-2/3-Clause AND BSL-1.0 AND MIT (torch); BSD (torchvision) |
 | transformers / huggingface-hub / safetensors | 5.21.0 / 1.33.0 / 0.8.0 | Apache-2.0 |
 | scipy | 1.18.1 | BSD-3-Clause |
@@ -57,8 +57,7 @@ Notable packages installed with the above:
 | sqlalchemy | 2.1.6 | MIT |
 | python-dotenv | 1.2.4 | BSD-3-Clause |
 
-Development and test only (not needed to run the service): pytest 9.1.1 (MIT),
-reportlab 5.1.0 (BSD), used to generate the synthetic sample forms.
+Development and test only (not needed to run the service): pytest 9.1.1 (MIT).
 
 ## Dashboard packages (`web/`)
 
@@ -86,22 +85,8 @@ vitest 5.0.5, openapi-typescript 7.13.0, @testing-library/react 16.3.3,
 |---|---|---|---|
 | Docling layout model "heron" | Hugging Face `docling-project/docling-layout-heron`, downloaded on first start (or `main.py download-models`) | Apache-2.0 (model card) | |
 | PP-OCRv6 small detection / recognition, `ch_ppocr_mobile_v2.0_cls` | Bundled in the `rapidocr` wheel | Apache-2.0; weights © Baidu / PaddleOCR rights holders | RapidOCR's `MODEL_LICENSES.md` lists the files and their SHA-256. Redistribution must keep the Apache-2.0 notices. The direction classifier is not used (`use_cls=False`). |
-| Qwen3.5 4B (`qwen3.5:4b`) | Ollama library | Apache-2.0 (Alibaba Cloud / Qwen team) | Field mapping, the document assistant and the n8n Accountant Assistant |
+| Qwen3.5 4B (`qwen3.5:4b`) | Ollama library | Apache-2.0 (Alibaba Cloud / Qwen team) | The partner, the role assistants and the document assistant |
 | nomic-embed-text v1.5 (`nomic-embed-text`) | Ollama library (publisher: Nomic AI) | Apache-2.0 (model card) | Document library search embeddings |
-| tev1 / tev1:0.8b | Ollama library (publisher: Together AI) | Not final, see below | Form classification |
-
-### tev1
-
-* Publisher: Together AI. Base model: Qwen3.5, fine-tuned to 4B and 0.8B; labelled "experimental".
-* The Ollama library page states that the dataset builders and training scripts are MIT licensed, but gives no license for the weights.
-* The Ollama package carries an MIT license file (copyright "open-jev contributors").
-* A user asked the publisher on GitHub (`togethercomputer/tev1` issue #2) to clarify commercial self-hosting, citing a model card statement that "the fine-tuned weights' release license is being finalized". The issue was closed by its author on 2026-10-17 with no answer from the publisher.
-
-Until the publisher states a license for the weights, treat commercial use of
-tev1 as unconfirmed. The service runs without it: `TEV_MODEL=none` identifies
-forms from their printed headings (`core.tev.HeadingClassifier`), which needs no
-model and no GPU memory. On the bundled samples, headings identify every form
-in every file, digital and scanned (see `README.md`, Verification).
 
 ## Runtime services
 
@@ -110,22 +95,12 @@ in every file, digital and scanned (see `README.md`, Verification).
 Runs the models locally. MIT license (github.com/ollama/ollama). Model weights
 pulled through Ollama keep their own licenses (above).
 
-### n8n
+### Connectors
 
-The optional intake workflow (`n8n/`) runs on n8n, which is "fair-code" under
-the **Sustainable Use License**, not an open-source license. From n8n's
-license FAQ:
-
-* **Allowed:** charging a client for installing, configuring, building
-  workflows and maintaining n8n on their behalf, on n8n the client runs.
-* **Not allowed:** hosting n8n as a service so clients can build or change
-  workflows, or selling a product whose value is substantially n8n itself.
-* **Grey areas** (for example running workflows for clients on your own
-  instance): n8n asks that you contact license@n8n.io; a commercial license is
-  available from sales@n8n.io.
-
-Deliver the workflow for the client's own n8n (self-hosted or their own n8n
-Cloud account) and charge for the build and maintenance.
+Connectors talk to the publisher's own MCP server (or, for the built-in workspace database, a local SQLite
+file). Nothing of theirs is installed; their API terms, data use and retention, and the client's own
+account and agreement with them apply. Some (for example n8n, under its Sustainable Use License) run on
+software the client hosts under that software's own license.
 
 ### Cloud model providers (optional)
 
@@ -148,7 +123,6 @@ with them) apply instead. The shipped configuration uses local Ollama only.
   (`web/node_modules/<package>/LICENSE`, `LICENSE.md` for react-router).
 * Model weights are downloaded by the client's machine from Hugging Face and
   Ollama under the licenses above.
-* Resolve the tev1 question (or ship with `TEV_MODEL=none`) before a paid delivery.
 
 ## Regenerate the package list
 
@@ -158,9 +132,6 @@ uv run python -m scripts.licenses
 
 ## Sources
 
-* n8n license FAQ: https://docs.n8n.io/n8n-community-license/community-license/license-faq
-* tev1 on Ollama: https://ollama.com/library/tev1 · license file of the Ollama package: https://ollama.com/library/tev1:0.8b/blobs/ff9fd7d3f054
-* tev1 license question: https://github.com/togethercomputer/tev1/issues/2
 * Qwen3.5-4B: https://llm-stats.com/models/qwen3.5-4b
 * nomic-embed-text: https://ollama.com/library/nomic-embed-text · https://huggingface.co/nomic-ai/nomic-embed-text-v1.5
 * Docling layout model card: https://huggingface.co/docling-project/docling-layout-heron

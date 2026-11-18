@@ -8,21 +8,20 @@ Dependency direction: `api -> business -> agent -> library -> core`. Nothing imp
 
 | Package | Modules | Responsibility |
 |---|---|---|
-| `core/` | `pipeline.py`, `parser.py`, `segment.py`, `tev.py`, `extractor.py`, `grounding.py`, `layout.py`, `tables.py`, `checkboxes.py`, `forms.py`, `schema.py`, `utils.py` | Parse, split, classify and extract forms; response models of the extraction routes |
-| | `flags.py` | `Flag {field, code, message}` and `FlagCode`, the one list of flag codes |
-| | `jobs.py` | `JobGate`: extraction slots shared by the extract/bulk/library-upload routes and the `extract_document` tool |
+| `core/` | `parser.py`, `layout.py` | `DoclingParser` (lifecycle, conversion of PDFs and images, OCR) -> `ParsedDocument` with text blocks per page |
+| | `schema.py`, `utils.py` | Shared response models (envelope, errors, health, API keys); logging, `mask_ssns` |
+| | `jobs.py` | `JobGate`: upload slots held by the library upload route |
 | | `auth.py`, `db.py`, `models.py`, `config.py` | API keys (registers ORM, `DATABASE_URL`), settings from env / `.env` |
 | `library/` | `config.py` | `LibraryConfig`, `EmbeddingConfig`, `Endpoint` (sections of `config/model_config.yml`) |
-| | `schema.py` | API models: documents, forms, `Check`, `Review`, search, stats |
-| | `ingest.py` | Uploaded bytes -> `DocumentDraft` (forms, page sizes, chunks, SSNs masked in chunks) |
+| | `schema.py` | API models: documents, pages, filters, search, sources and passages |
+| | `ingest.py` | Uploaded bytes -> `DocumentDraft` (page sizes, chunks, SSNs masked in chunks) |
 | | `store.py` | SQLite schema and every query; `where()` turns filters + owner into SQL; `chunk_usage` (retrievals per chunk), `sources` and `passages` (the index, browsable) |
 | | `search.py` | `Embedder` (OpenAI-compatible `/embeddings`), hybrid search over chunks, `diversify` (breadth over documents), `other_sources`, retrieval counts |
-| | `files.py` | Originals on disk (`library.files`, by SHA-256), page sizes, PNG rendering, PDF page subsets |
-| | `review.py` | `checks`, `corrected_fields`, `normalise`, `undecided`; review exceptions |
+| | `files.py` | Originals on disk (`library.files`, by SHA-256), page sizes, PNG rendering |
 | | `service.py` | `Library`: one method per use case; what routes and tools call |
 | `agent/` | `config.py` | `ChatConfig`, `AssistantSettings`, `load_config` (the YAML file but the `business` section), `read_yaml` |
 | | `agent.py` | `ChatClient` (OpenAI-compatible and Anthropic wire formats), `tool_loop` (shared by every assistant), `Assistant.reply` |
-| | `tools.py` | `Tool`, `ToolContext`, `TOOLS` registry and the seven tools |
+| | `tools.py` | `Tool`, `ToolContext`, `TOOLS` registry and the four tools |
 | | `schema.py` | Chat request/response models |
 | `business/` | `schema.py` | API models of the workspace: profile, interview, partner, organized documents, connectors, assistants, approvals, notes, UI events and hints |
 | | `config.py` | `BusinessConfig` (the `business` section: database, secrets key variable, public URL, `ContextBudgets`, `assistant_prompt`, `PartnerSettings`), `load_business_config` |
@@ -37,13 +36,13 @@ Dependency direction: `api -> business -> agent -> library -> core`. Nothing imp
 | | `database.py` | `DatabaseApp`: the workspace database app (one SQLite file per installed connector): tables, rows, SQL under an authorizer, CSV, and its assistant tools |
 | | `errors.py` | `InvalidSpec`, `NotActive`, `AlreadyDecided`, `OutdatedWorkspace` (mapped in `api/errors.py`) |
 | | `service.py` | `Business`: one method per use case; what the routes call |
-| `api/` | `app.py` | `create_app`: state (`pipeline`, `library`, `assistant`, `business`, `connectors`, `jobs`, rate windows), middleware, routers, dashboard mount; builds `ConnectorHub(business.database, secrets key or None, business.public_url)` and `Business(config, library, assistant.chat, hub)` unless `business=` is injected; `app.state.connectors` is `business.hub` |
-| | `deps.py` | Auth (`ClientDep`, `AdminDep`), `owner_scope`, `business_owner`, `reviewer`, rate limits, `job_slot`, body limit, `read_upload` |
+| `api/` | `app.py` | `create_app`: state (`parser`, `library`, `assistant`, `business`, `connectors`, `jobs`, rate windows), middleware, routers, dashboard mount; builds `ConnectorHub(business.database, secrets key or None, business.public_url)` and `Business(config, library, assistant.chat, hub)` unless `business=` is injected; `app.state.connectors` is `business.hub` |
+| | `deps.py` | Auth (`ClientDep`, `AdminDep`), `owner_scope`, `business_owner`, rate limits, `job_slot`, body limit, `read_upload` |
 | | `errors.py` | Error envelope; `DOMAIN_ERRORS` maps domain exceptions to a `DomainError` (status, code, details, fixed message, `Retry-After`, log line) |
-| | `routes/` | `documents.py` (stateless extraction), `library.py`, `reviews.py`, `assistant.py`, `business.py` (workspace, hints, profile, interview, partner, organized documents, notes), `knowledge.py` (the index: map, passages, search), `assistants.py` (specs, context, runs, approvals), `connectors.py`, `databases.py` (workspace databases), `keys.py`, `system.py` |
+| | `routes/` | `library.py`, `assistant.py`, `business.py` (workspace, hints, profile, interview, partner, organized documents, notes), `knowledge.py` (the index: map, passages, search), `assistants.py` (specs, context, runs, approvals), `connectors.py`, `databases.py` (workspace databases), `keys.py`, `system.py` |
 | | `web.py` | Serves `web/dist` with SPA fallback outside API paths |
 | `scripts/` | `openapi.py` | Writes `web/src/api/openapi.json` |
-| `tests/` | `fakes.py` | Mock embeddings/chat transports, sample W-2 with flags, fake pipeline, `FakeHub` (the `ConnectorHub` interface in memory), `workspace` (a `Business` on tmp databases) |
+| `tests/` | `fakes.py` | Mock embeddings/chat transports, `draft` / `add` helpers, `fake_parser`, `FakeHub` (the `ConnectorHub` interface in memory), `workspace` (a `Business` on tmp databases) |
 | | `e2e/fake_models.py`, `e2e/stack.py` | Fake model server; API + fake models + fresh data dir |
 | `web/` | `src/api/`, `src/features/`, `src/components/`, `e2e/` | The dashboard (React + TypeScript): typed client and query hooks, one folder per page (components, and their state and effects in the folder's `hooks.ts`), shared components, Playwright E2E. Structure and traces: [web/README.md](../web/README.md) |
 
@@ -53,50 +52,30 @@ Ownership: every library query takes `owner` (the API key id as a string, or `No
 
 ## Request traces
 
-### Upload: file -> forms, file, chunks
+### Upload: file -> file, chunks
 
 `POST /v1/library/documents` ([api/routes/library.py](../api/routes/library.py) `add_document`)
 
-1. Dependencies: `require_api_key`, `RateLimit("library")`, `job_slot` (holds a `core.jobs.JobGate` slot for the whole request; `Busy` -> `503 busy`).
+1. Dependencies: `require_api_key`, `RateLimit("library")`, `job_slot` (holds a `core.jobs.JobGate` slot for the whole request; `Busy` -> `503 busy`). A `location` (or, without one, a file name) starting with `workspace://` -> 400.
 2. `read_upload` (size limit) -> `Library.find(owner, sha256)`: an existing upload of the same owner returns 200 with no work.
-3. `library.ingest.read_file`: `file_type` (magic bytes, else suffix) -> for PDFs/images `scanned_chunks` -> `TaxDocumentPipeline.extract_file` (parse, `split`, `_classify_segment`, `_extract_form` -> `FormResult` per form with `validation.flags`) -> `form_chunks` for `ok` forms + `page_chunks` for other pages; `files.page_sizes`. Text files go to `markdown_chunks` / `row_chunks` / `xlsx_chunks` / `text_chunks`. SSNs are masked in every chunk (`core.utils.mask_ssns`, see [SSN masking](#ssn-masking)).
-4. `Library.add` ([library/service.py](../library/service.py)): `review.flagged_fields` per `ok` form, `Embedder.embed(chunks)`, then in a thread `Files.save` and `Store.insert` (one transaction: `documents`, `forms` with `flagged_fields` and `review_status = pending` for `ok` forms, `document_chunks` linked to their form by `form_id`; `index_dimensions` records/checks the embedding model) -> `Store.document` -> `DocumentDetail`.
-
-### Flags: where they come from
-
-`ValidationReport.flags` is assembled in `TaxDocumentPipeline._extract_form` ([core/pipeline.py](../core/pipeline.py)) from, in order: `_classify_segment` (`uncertain_type`), `ParsedDocument.gaps_in` (`partial_conversion`, `missing_page`), and `LLMExtractor.extract` ([core/extractor.py](../core/extractor.py)), which collects `no_output`, `clean_separators` (`text_as_json`, `multiple_values`), `validate_leniently` (`unparseable`), `grounding.verify` (a `_Verifier` walks the form: `check` gives `not_printed`, `wrong_label`, `unlabeled` for amounts and TINs; `locate` fills `sources` for the other values it finds, without flags) and `TaxForm.consistency_checks` (`inconsistent`). Field paths come from `core.flags.field_path` or `_Verifier.walk`, so they match `sources` keys and check fields. `Flag` masks SSNs in `message` when it is built (and when stored flags are loaded).
-
-### Review: read a form
-
-`GET /v1/library/forms/{id}` ([api/routes/reviews.py](../api/routes/reviews.py)) -> `Library.form` -> `Store.form` (joins `documents` for the owner check; rebuilds the `FormResult` from the stored JSON; its `reviews` come in the same query as a JSON array, `store._FORM_ROWS`) -> `Library._detail` -> `review.checks` (a `FormChecks(checks, form_flags)`): `_leaves` walks the form model class (not the data) in field order, so empty boxes appear; list fields yield one group per extracted row; value from the JSON dump, `source` from `validation.sources` (row source as fallback), flags grouped by `field`; flags naming no check become form-level. `corrected_fields` applies decisions to the dump and re-validates it with the form model.
-
-### Review: a decision, and the chunk rebuild
-
-`PUT /v1/library/forms/{id}/reviews/{field}` -> `Library.review`, which runs `_review` under the form's `asyncio.Lock` (`Library._form_locks`, keyed by form id, created on first use and kept for the process's lifetime), so concurrent decisions on one form run one after another and each chunk rebuild starts from the stored decisions of the previous one. The lock is per process: several API worker processes do not share it.
-
-1. `Store.form`; `_reviewable`: `NotReviewable` (409) unless `status == "ok"` (also used by `approve` and `reopen`); `None` (404) when `field` is not a check path.
-2. `corrected`: `review.normalise` sets the value in the dump and validates the whole form model, so the same parsers as extraction apply (`InvalidValue` -> 422).
-3. `corrected_fields` before and after. If they differ: `ingest.form_chunks(form, fields=after)` and `Embedder.embed` (before any write; a 503 leaves nothing changed).
-4. `Store.save_review` in one transaction: upsert or delete the `reviews` row, reopen the form if approved, and when chunks were built, delete the form's chunks (`form_id`) and insert the new ones. The FTS index follows through the triggers.
-5. Returns the field's `Check`.
-
-`POST .../approve` -> `Library.approve` -> `review.undecided(checks)`; non-empty -> `ApprovalBlocked` -> `409 review_incomplete` with `details.undecided` (mapping in `api/errors.py`) -> otherwise `Store.set_status(approved, reviewer)`.
+3. `library.ingest.read_file`: `file_type` (magic bytes, else suffix) -> PDFs/images: `DoclingParser.parse` (OCR where there is no text layer, at most `MAX_PAGES` pages) -> `page_chunks` (one chunk set per page, section `Page n`) and `files.page_sizes`. Text files go to `markdown_chunks` / `row_chunks` / `xlsx_chunks` / `text_chunks`. SSNs are masked in every chunk (`core.utils.mask_ssns`, see [SSN masking](#ssn-masking)).
+4. `Library.add` ([library/service.py](../library/service.py)): `Embedder.embed(chunks)`, then in a thread `Files.save` and `Store.insert` (one transaction: `documents`, `document_chunks`; `index_dimensions` records/checks the embedding model) -> `Store.document` -> `DocumentDetail`.
 
 ### SSN masking
 
-One function, `core.utils.mask_ssns`, used for chunks (`library.ingest`: `form_lines`, `form_chunks`, `read_file`) and flag messages (`core.flags.Flag`). Masked to `XXX-XX-1234`: 3-2-4 digits with one separator (dash or space), and 9 bare digits only after SSN, ITIN, TIN or social security (optionally `#`, `no.`, `number`). Other bare 9-digit runs stay, because spreadsheet cells, CSV rows and page text are chunked verbatim, so they can be amounts, account or control numbers (extracted amounts render as floats with a decimal point). EINs (`12-3456789`) are kept; an EIN printed without its dash right after "TIN" is masked.
+One function, `core.utils.mask_ssns`, used for every chunk (`library.ingest.read_file`, and the workspace records through `markdown_chunks`). Masked to `XXX-XX-1234`: 3-2-4 digits with one separator (dash or space), and 9 bare digits only after SSN, ITIN, TIN or social security (optionally `#`, `no.`, `number`). Other bare 9-digit runs stay, because spreadsheet cells, CSV rows and page text are chunked verbatim, so they can be amounts, account or control numbers. EINs (`12-3456789`) are kept; an EIN printed without its dash right after "TIN" is masked.
 
 ### Pages and files
 
 `GET .../documents/{id}/pages/{n}` (sync route, so FastAPI runs it in a thread) -> `Library.page_png` -> `Store.media` (owner check, hash, media type, page list) -> `Files.load` -> `files.render_png` (pypdfium2 at `width / page width`, or PIL with EXIF rotation) -> route sets `ETag` / answers `If-None-Match` with 304. `.../file` -> `Library.original`.
 
-### Lists and stats
+### Lists
 
-`GET /v1/library/documents` and `GET /v1/library/stats` share `_filters` (query parameters -> `DocumentFilters`). `store.where` builds the conditions (review status as `EXISTS` over `forms`, `q` as escaped `LIKE`); `store._matching` is the subquery of matching document ids; counts use `store.OPEN_FLAGS` (flagged fields of a form without a `reviews` row, via `json_each(forms.flagged_fields)`).
+`GET /v1/library/documents` -> `DocumentFilters(q, origin)` -> `Library.list` -> `store.where` builds the conditions (owner, `document_ids`, `q` as escaped `LIKE` on the title, `origin` by the `workspace://` location prefix).
 
 ### Knowledge index: memory, breadth, the map
 
-Everything searchable is a library document with chunks; the workspace's own records are documents whose `location` starts with `workspace://` (`library.schema.WORKSPACE_PREFIX`). `DocumentFilters.origin` (`upload` / `workspace`) separates them: the documents list and stats routes default to `upload`, and the workspace's counts (`Business._workspace`) use `UPLOADS`.
+Everything searchable is a library document with chunks; the workspace's own records are documents whose `location` starts with `workspace://` (`library.schema.WORKSPACE_PREFIX`). `DocumentFilters.origin` (`upload` / `workspace`) separates them: the documents list route defaults to `upload`, and the workspace's counts (`Business._workspace`) use `UPLOADS`.
 
 1. Sync: `Business.sync_memory(owner)` -> `memory.sync` under `Business.memory_lock(owner)`: `records(profile, answers, notes)` renders three Markdown texts (`profile_markdown`: a `##` section per topic, department and role; `discovery_markdown`: per interview area; `notes_markdown`: per topic), `draft` chunks each with `ingest.markdown_chunks` (SSNs masked) and hashes it. A record whose hash equals the stored one (`Library.at_location`) is left alone; otherwise the new document is added first (`Library.add` embeds it) and the old ones at that location are deleted after, so an embedding outage leaves the old record searchable; an empty text removes the record. Called before anything searches: `Business.knowledge`, `Business.search` (strict: a model outage is a `503`), `partner.chat`, `runner.run`, and the document assistant route. Elsewhere an `EmbeddingsUnavailable` / `IndexMismatch` is logged and the caller goes on.
 2. Search: `Library.search_wide` -> `search.search_chunks`: semantic and keyword rankings fused as before, then `diversify(fused, document of each chunk, limit)`: at most `max(2, (limit + 1) // 2)` chunks of one document while other documents still have candidates, then the held-back ones fill up. `other_sources`: documents with a candidate chunk that matched by keyword or has a similarity of at least `NEAR` (0.8) times the best, and no chunk among the hits (at most `OTHER_SOURCES`). `Store.record_hits` counts the returned chunks in `chunk_usage` in the same transaction. `Library.search` returns the hits only.
@@ -113,11 +92,11 @@ Everything searchable is a library document with chunks; the workspace's own rec
 
 ### Chat: the tool loop
 
-`POST /v1/assistant/chat` -> `Assistant.reply(request, owner, pipeline, jobs)` ([agent/agent.py](../agent/agent.py)) builds a `ToolContext` (library, scope, owner, pipeline, jobs, numbered `sources`) and runs `tool_loop(chat, messages, specs, dispatch, max_tool_rounds)` with every `TOOLS` spec: `ChatClient.complete`; each call of a turn goes to `dispatch(call, turn text)` in order (here: recorded in `tool_calls`, then `Assistant._run` -> `TOOLS[name].run(args, ctx)`); the returned text goes back as a `tool` message. After `max_rounds` rounds the model is called without tools. `tool_loop` returns (final `Reply`, summed integer usage); the partner and role assistants run the same function with their own tools and dispatch. In [agent/tools.py](../agent/tools.py) field values go through `ingest.form_lines` (SSNs masked); flag messages are already masked by `Flag`. `narrow` merges the model's filters into the scope (refusing to widen it), `scoped_document` resolves `document_id` through `Library.list` with the scope and owner, `get_document` reads every form of the document with `Library.forms` (`Store.forms`: one query for the forms and their decisions), `search_documents` numbers hits into `ctx.sources`, `classify_document` / `extract_document` load the stored file with `Library.original` and call the pipeline (`extract_document` inside `ctx.jobs.slot()`), and processing errors come back as `error: ...` text.
+`POST /v1/assistant/chat` -> `Business.sync_memory`, then `Assistant.reply(request, owner)` ([agent/agent.py](../agent/agent.py)) builds a `ToolContext` (library, scope, owner, numbered `sources`) and runs `tool_loop(chat, messages, specs, dispatch, max_tool_rounds)` with every `TOOLS` spec: `ChatClient.complete`; each call of a turn goes to `dispatch(call, turn text)` in order (here: recorded in `tool_calls`, then `Assistant._run` -> `TOOLS[name].run(args, ctx)`); the returned text goes back as a `tool` message. After `max_rounds` rounds the model is called without tools. `tool_loop` returns (final `Reply`, summed integer usage); the partner and role assistants run the same function with their own tools and dispatch. In [agent/tools.py](../agent/tools.py) `scoped(ctx, q)` adds a title filter inside the request's scope (the model cannot widen it), `scoped_document` resolves `document_id` through `Library.list` with the scope and owner, `search_documents` numbers hits into `ctx.sources`, and bad input comes back as `error: ...` text.
 
 ### Partner chat: interview and organize
 
-`POST /v1/partner/chat` ([api/routes/business.py](../api/routes/business.py), `RateLimit("assistant")`) -> `Business.partner_chat` -> `partner.chat(business, owner, request, pipeline, jobs)` ([business/partner.py](../business/partner.py)):
+`POST /v1/partner/chat` ([api/routes/business.py](../api/routes/business.py), `RateLimit("assistant")`) -> `Business.partner_chat` -> `partner.chat(business, owner, request)` ([business/partner.py](../business/partner.py)):
 
 1. `PartnerContext`: business, owner, a `ToolContext` over the owner's library (empty scope), the `*_changed` flags.
 2. Messages: `business.partner.system_prompt`; `state_message` (in a thread): `interview_lines(Business.interview)` (store answers + profile -> `questions.interview_state`), `fit(profile_digest(profile), context.business)`, assistants (`name [id] status: role`), and `ui_state` as `Screen: ...` (`detail` as sorted JSON, at most 500 characters); then the request's messages.
@@ -169,7 +148,7 @@ Each layer is at most its budget. The runner sends `business`, `role`, `team` as
 ### Add an API route
 
 1. Request/response models with `Field(description=...)` in the package's `schema.py` (`library/schema.py` for library data).
-2. The use case as a `Library` method (or in `core` for stateless extraction); SQL in `library/store.py`, scoped with `where(..., owner)`.
+2. The use case as a `Library` (or `Business`) method; SQL in `library/store.py`, scoped with `where(..., owner)`.
 3. The route in `api/routes/<area>.py`: auth via the router's `require_api_key`, `ClientDep` / `owner_scope(key)`, `Envelope[...]` response, `responses=responses(...)` for its error statuses. A new router module is included in `api/app.py`.
 4. New domain exceptions: add to `DOMAIN_ERRORS` in `api/errors.py` as `DomainError(status, code, details=..., message=..., retry_after=..., log=...)`.
 5. Tests next to the area's (`tests/test_library.py` uses `make_test_app` with `tests.fakes`), then [change the API contract](#change-the-api-contract).
@@ -179,17 +158,14 @@ Each layer is at most its budget. The runner sends `business`, `role`, `team` as
 1. In `agent/tools.py`:
 
    ```python
-   @tool("count_forms", "Count extracted forms per type for a client.",
-         {"type": "object", "properties": {"client": {"type": "string"}}})
-   async def count_forms(args: dict, ctx: ToolContext) -> str:
-       filters = narrow(args, ctx.scope, ("client",))
-       if isinstance(filters, str):
-           return filters
-       stats = await run_in_threadpool(ctx.library.stats, filters, ctx.owner)
-       return ", ".join(f"{k}: {v}" for k, v in stats.forms_by_type.items()) or "No forms."
+   @tool("count_documents", "Count stored documents, optionally those whose title contains a text.",
+         {"type": "object", "properties": {"q": {"type": "string"}}})
+   async def count_documents(args: dict, ctx: ToolContext) -> str:
+       total, _ = await run_in_threadpool(ctx.library.list, scoped(ctx, args.get("q")), ctx.owner, 1, 0)
+       return f"{total} document(s)."
    ```
 
-   Registration is the decorator; `Assistant` offers every registered tool. Keep tools read-only, go through `narrow` / `scoped_document` so owner and scope hold, and return `error: ...` text for bad input.
+   Registration is the decorator; `Assistant` offers every registered tool. Keep tools read-only, go through `scoped` / `scoped_document` so owner and scope hold, and return `error: ...` text for bad input.
 2. Mention the tool in `assistant.system_prompt` in `config/model_config.yml` and in the README tools table.
 3. Test it with `run_tool(...)` in `tests/test_assistant.py` (owner `"2"` and an excluding scope must not see the document).
 
@@ -227,16 +203,9 @@ Edit `SCHEMA` in `business/store.py` and increase `SCHEMA_VERSION` (stored in `b
 ### Add a dashboard page
 
 1. `web/src/features/<name>/<Name>Page.tsx` exporting the page component (styles in `<Name>Page.module.css`, built from `web/src/components/` and the tokens in `web/src/styles/tokens.css`).
-2. One entry in `pages` in `web/src/features/index.ts`: `{ path: "/clients", label: "Clients", icon: Users, component: ClientsPage, nav: true }`. `nav` puts it in the sidebar; `fullBleed` drops the content padding and page scroll for pages that scroll their own panes.
+2. One entry in `pages` in `web/src/features/index.ts`: `{ path: "/suppliers", label: "Suppliers", icon: Truck, component: SuppliersPage, nav: true }`. `nav` puts it in the sidebar; `fullBleed` drops the content padding and page scroll for pages that scroll their own panes.
 3. Data through a hook in `web/src/api/<resource>.ts` (`useQuery` + `unwrap(api.GET(...))`); an endpoint that does not exist yet starts with [add an API route](#add-an-api-route) and [change the API contract](#change-the-api-contract).
 4. `npm run typecheck`, `npm test`, and a step in `web/e2e/dashboard.spec.ts` when the page has a workflow. Details: [web/README.md](../web/README.md#add-a-page).
-
-### Add a form type
-
-1. Model in `core/forms.py` (class vars `FORM_ID`, `NAME` for display, `TITLE` as printed, `HINT` for the classifier) using `box()`, `party()`, `rows()`, `table()`, `column()`; `consistency_checks` returns `inconsistent(field, message)` flags on the field that looks off; register it in `FORMS`.
-2. Fixtures in `tests/samples/` (`<id>.pdf`, `<id>_scan.png`, `<id>.json` ground truth) and tests.
-3. Review checks, labels and kinds follow from the model (`Field` descriptions, the `Money`/`Tin`/`Date`/... types); the fake model server picks up `<id>.json` automatically.
-4. [Change the API contract](#change-the-api-contract) (the form's schema is in the OpenAPI document).
 
 ### Change the API contract
 
@@ -247,54 +216,38 @@ uv run pytest tests/test_web.py         # fails while the committed file is stal
 
 Then regenerate the dashboard's types: `npm run gen:api` in `web/` (`web/src/api/schema.test.ts`, run by `npm test`, fails while `schema.d.ts` is stale), fix what `npm run typecheck` reports, and update the README contract tables. Breaking changes bump `version` in `api/app.py`.
 
-### Add a flag code
-
-1. Add it to `FlagCode` and the table in `core/flags.py`.
-2. Emit `Flag(field=<path or None>, code="...", message="...")` where it is detected; never put a full TIN in `message`.
-3. README flag table; [change the API contract](#change-the-api-contract) (the code is an enum in OpenAPI). Flags on a field that has a check block approval until decided; others are form-level.
-
 ### Change the library database schema
 
-Edit `SCHEMA` in `library/store.py` and increase `SCHEMA_VERSION`. A database file with another version is refused with `500 outdated_library` (there are no migrations): say so in the README's breaking-change note.
+Edit `SCHEMA` in `library/store.py` and increase `SCHEMA_VERSION`. A database file of another version is refused with `500 outdated_library` unless an upgrade script handles it (version 2 -> 3: `_UPGRADE_FROM_2`, which rebuilds the tables without the tax-form columns and keeps documents, passages, embeddings and retrieval counts; tested in `tests/test_library.py`). Add a script like it, or say in the README that old files must be rebuilt.
 
 ## Tests
 
 | File | Covers |
 |---|---|
-| `tests/test_forms.py` | Value parsers, form schemas and lenient validation, consistency flags, SSNs masked in flag messages |
-| `tests/test_grounding.py` | Label/value pairing, grounding flags (`not_printed`, `wrong_label`, `unlabeled`) and sources |
-| `tests/test_checkboxes.py` | Checkbox states from the page image (synthetic pages) |
-| `tests/test_tables.py` | Table rows: 1099-B transactions and sections, 1095-A months |
-| `tests/test_segment.py` | Upload sniffing, classifier input, heading classifier, splitting a file into forms |
-| `tests/test_extractor.py` | Answer cleanup and merging, evidence chunks, token budget |
-| `tests/test_evaluate.py` | The accuracy evaluator's field comparison and form scoring |
-| `tests/test_pipeline.py` | Duplicate identity; bulk duplicates, partial conversions and missing pages (fake parser/extractor) |
-| `tests/test_api.py` | Auth, rate limits, validation, error envelope, body limit, job gate (fake pipeline) |
+| `tests/test_api.py` | Auth, rate limits, validation, error envelope, body limit, job gate, uploads (fake parser) |
 | `tests/test_assistant.py` | Ingestion, search, provider wire formats, tool loop, every tool |
-| `tests/test_business.py` | Question bank and next-question selection, profile merge patch and isolation, context layers (identical business layer, role matching, team without drafts, budgets, notes as delimited data with long notes skipped), assistant spec validation (uninstalled connectors, policy keys, duplicate names), organized documents, notes, summary and connector recommendations (incl. `listing_id`), workspace schema version refused before any change, hint rules, `extract=false` uploads |
+| `tests/test_business.py` | Question bank and next-question selection, profile merge patch and isolation, context layers (identical business layer, role matching, team without drafts, budgets, notes as delimited data with long notes skipped), assistant spec validation (uninstalled connectors, policy keys, duplicate names), organized documents, notes, summary and connector recommendations (incl. `listing_id`), workspace schema version refused before any change, hint rules |
 | `tests/test_assistants.py` | Partner tool loop (answers, profile patches, connector recommendations, drafts, organizing and searching documents, updates send assistants back to draft in the same write, capped tool results), runner policy (read-only, auto, ask, deny, unknown tools, notes topics), context preview equals what a run sends (roles included), knowledge scope, tool names (salted fallback), approvals (approve, always only after an executed call and while the connector is in the spec, reject, failure, claimed before the call, concurrent decisions), routes end to end with owner isolation |
 | `tests/test_connectors.py` | Store catalog (built-in apps, storage listings), `ConnectorHub` against a real in-process MCP server (add, check, tools and read-only flags, calls, bearer auth, secrets encrypted at rest, the generated key file, owner isolation), SSE and stdio, OAuth against a fake authorization server, connector routes (see [CONNECTORS.md](CONNECTORS.md)) |
 | `tests/test_database.py` | `DatabaseApp` (tables, typed columns, paging, conditions required, names validated, read queries cannot write, writes cannot leave the file, result cap, CSV import/export), the database as a hub connector (install, tools, calls, removal deletes the file, owner isolation), database routes |
 | `tests/test_knowledge.py` | Workspace memory (records searchable, rewritten only when changed, removed when empty, not counted as uploads), `diversify` and breadth across documents, the map (totals, never retrieved, sections, filters), `browse_knowledge` / `read_document`, sources named beside search hits, assistants searching workspace records, knowledge routes |
 | `tests/test_workspace_flow.py` | End to end with the real `ConnectorHub` sharing the workspace database: a read runs, a write under `ask` is queued, approving it runs the call with the stored bearer token |
-| `tests/test_library.py` | Checks, decisions, approval, a document's forms in one read, chunk rebuild (also with concurrent decisions on one form), stats/filters, files, page rendering, library and review routes |
+| `tests/test_library.py` | Ingestion (text files, pages), store and filters, the v2 -> v3 upgrade, files, page rendering, library routes |
 | `tests/test_web.py` | OpenAPI file current, SPA fallback |
-| `tests/e2e/test_fake_models.py` | The fake model server answers the real clients |
-| `web/src/**/*.test.{ts,tsx}` (`npm test`) | Corrected-value parsing, box and crop geometry, citations, answer Markdown, chat helpers (greeting, scroll, tool wording), generated types current; components on a fake API: review keyboard flow and approval, decision shown at once and rolled back, upload dialog states, sign-in and 401 sign-out |
-| `web/e2e/dashboard.spec.ts` (`npm run e2e`) | The dashboard on the full stack: sign-in, upload, overview, review and approval, theme, assistant (panel citations and sources, page conversation, New chat), delete |
-| `tests/test_integration.py` | Real Docling + Ollama (`-m integration`; skipped without the models) |
+| `web/src/**/*.test.{ts,tsx}` (`npm test`) | Citations, answer Markdown, chat helpers (greeting, scroll, tool wording), assistant spec schema, file names, generated types current; components on a fake API: partner chat and uploads, knowledge map, assistants, approvals, plugins, databases, hints, sidebar, upload dialog states, sign-in and 401 sign-out |
+| `web/e2e/dashboard.spec.ts` (`npm run e2e`) | The dashboard on the full stack: sign-in, upload, a document's passages, theme, assistant (panel citations and sources, page conversation, New chat), delete |
 
-`uv run pytest -m "not integration" -q` runs everything without models. Business tests use `tests.fakes.workspace` (tmp library and workspace databases, a scripted `Chat`, a `FakeHub`); `make_test_app` builds a workspace on a fresh temporary database with `connectors=` (default a `FakeHub`) unless `business=` is passed, and the session fixture `no_real_connector_hub` replaces `api.app.ConnectorHub` with a `FakeHub` factory, so `create_app` calls without an injected workspace (`scripts.openapi.render`, `tests/test_web.py`) never build the real hub. The API-key database is a temporary file named in `DATABASE_URL` before `core` is imported (models bind to it then); `fresh_key_db` in `tests/conftest.py` drops and recreates its tables before each test module. Library tests get their own database and files under `tmp_path`. `uv run ruff check .` is the lint gate (rules and the ignored ones, with reasons, in `[tool.ruff]` of `pyproject.toml`; ruff is installed separately, e.g. `uv tool install ruff`); `ruff format` is not used. Offline, set `HF_HUB_OFFLINE=1` first (POSIX shells: prefix the command with it; PowerShell: `$env:HF_HUB_OFFLINE = "1"`).
+`uv run pytest -q` runs everything without models. Business tests use `tests.fakes.workspace` (tmp library and workspace databases, a scripted `Chat`, a `FakeHub`); `make_test_app` builds a workspace on a fresh temporary database with `connectors=` (default a `FakeHub`) unless `business=` is passed, and the session fixture `no_real_connector_hub` replaces `api.app.ConnectorHub` with a `FakeHub` factory, so `create_app` calls without an injected workspace (`scripts.openapi.render`, `tests/test_web.py`) never build the real hub. The API-key database is a temporary file named in `DATABASE_URL` before `core` is imported (models bind to it then); `fresh_key_db` in `tests/conftest.py` drops and recreates its tables before each test module. Library tests get their own database and files under `tmp_path`. `uv run ruff check .` is the lint gate (rules and the ignored ones, with reasons, in `[tool.ruff]` of `pyproject.toml`; ruff is installed separately, e.g. `uv tool install ruff`); `ruff format` is not used. Offline, set `HF_HUB_OFFLINE=1` first (POSIX shells: prefix the command with it; PowerShell: `$env:HF_HUB_OFFLINE = "1"`).
 
 ## Run the full stack locally without GPUs
 
-Docling runs for real (CPU; weights from the Hugging Face cache, or `DOCLING_ARTIFACTS_PATH`); extraction, embeddings and chat come from [tests/e2e/fake_models.py](../tests/e2e/fake_models.py) (see its docstring for what it answers); classification uses printed headings (`TEV_MODEL=none`).
+Docling runs for real (CPU; weights from the Hugging Face cache, or `DOCLING_ARTIFACTS_PATH`); embeddings and chat come from [tests/e2e/fake_models.py](../tests/e2e/fake_models.py) (see its docstring for what it answers).
 
 One command (fresh temporary data directory, keys printed as JSON and written to `--state`):
 
 ```sh
-uv run python -m tests.e2e.stack --api-port 8000 --models-port 11435 --state tda-e2e.json
-# {"api": "http://127.0.0.1:8000", "admin_key": "ak_...", "client_key": "ak_...", "data": "<temp dir>/tda-e2e-..."}
+uv run python -m tests.e2e.stack --api-port 8000 --models-port 11435 --state harness-e2e.json
+# {"api": "http://127.0.0.1:8000", "admin_key": "ak_...", "client_key": "ak_...", "data": "<temp dir>/harness-e2e-..."}
 ```
 
 Set `HF_HUB_OFFLINE=1` (as above) when Docling's weights are already cached, and `HF_HUB_CACHE` when they are not in the default cache. The command is plain Python, so it is the same on Windows. Stop it with Ctrl+C (it also stops the fake model server, a thread of the same process).
@@ -304,39 +257,33 @@ The JSON line is printed (and the state file written) before uvicorn starts; pol
 The same by hand, with the regular CLI (POSIX shell; on Windows use Git Bash, or the one command above):
 
 ```sh
-mkdir -p /tmp/tda-dev
+mkdir -p /tmp/harness-dev
 uv run python -m tests.e2e.fake_models --port 11435 &
 sed -e 's#^  base_url: null#  base_url: http://127.0.0.1:11435/v1#' \
-    -e 's#database: data/library.db #database: /tmp/tda-dev/library.db #' \
-    -e 's#files: data/files #files: /tmp/tda-dev/files #' \
-    -e 's#database: data/business.db #database: /tmp/tda-dev/business.db #' config/model_config.yml > /tmp/tda-dev/model_config.yml
-export DATABASE_URL=sqlite:////tmp/tda-dev/keys.db OLLAMA_URL=http://127.0.0.1:11435 TEV_MODEL=none \
-       ASSISTANT_CONFIG=/tmp/tda-dev/model_config.yml HF_HUB_OFFLINE=1
+    -e 's#database: data/library.db #database: /tmp/harness-dev/library.db #' \
+    -e 's#files: data/files #files: /tmp/harness-dev/files #' \
+    -e 's#database: data/business.db #database: /tmp/harness-dev/business.db #' config/model_config.yml > /tmp/harness-dev/model_config.yml
+export DATABASE_URL=sqlite:////tmp/harness-dev/keys.db ASSISTANT_CONFIG=/tmp/harness-dev/model_config.yml HF_HUB_OFFLINE=1
 uv run main.py create-key --name admin --admin
 uv run main.py create-key --name client          # use this key below as KEY
 uv run main.py serve --port 8000 &
 ```
 
-A session that exercises every feature (POSIX shell; `KEY` is the client key; Python prints the ids):
+A session that exercises the knowledge features (POSIX shell; `KEY` is the client key; Python prints the id):
 
 ```sh
 A=http://127.0.0.1:8000
-set -- $(curl -s -H "X-API-Key: $KEY" -F "file=@tests/samples/w2.pdf" -F client=Gonzalez -F tax_year=2025 $A/v1/library/documents \
-  | uv run python -c "import json,sys; d=json.load(sys.stdin)['data']; print(d['id'], d['forms'][0]['id'])")
-DOC_ID=$1 FORM_ID=$2
-curl -s -H "X-API-Key: $KEY" -F "file=@tests/samples/stack.pdf" -F client=Okafor $A/v1/library/documents >/dev/null
-curl -s -H "X-API-Key: $KEY" $A/v1/library/forms/$FORM_ID                   # checks; 2 flagged fields
-curl -s -o page1.png -H "X-API-Key: $KEY" "$A/v1/library/documents/$DOC_ID/pages/1?width=1200"
-curl -s -X POST -H "X-API-Key: $KEY" $A/v1/library/forms/$FORM_ID/approve   # 409 review_incomplete
-curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" -d '{"decision": "confirmed"}' \
-  $A/v1/library/forms/$FORM_ID/reviews/control_number
-curl -s -X PUT -H "X-API-Key: $KEY" -H "Content-Type: application/json" -d '{"decision": "corrected", "value": "68,412.55"}' \
-  $A/v1/library/forms/$FORM_ID/reviews/wages_tips_other_comp
-curl -s -X POST -H "X-API-Key: $KEY" $A/v1/library/forms/$FORM_ID/approve   # approved
+printf '# Handbook\n\n## Refunds\n\nUnopened goods can be returned within 30 days.\n' > handbook.md
+DOC_ID=$(curl -s -H "X-API-Key: $KEY" -F "file=@handbook.md" $A/v1/library/documents \
+  | uv run python -c "import json,sys; print(json.load(sys.stdin)['data']['id'])")
+curl -s -H "X-API-Key: $KEY" "$A/v1/knowledge/$DOC_ID/passages"           # passages, never retrieved
 curl -s -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "What were the wages tips other compensation?"}], "scope": {"client": "Gonzalez"}}' \
+  -d '{"messages": [{"role": "user", "content": "How long do customers have for a refund?"}]}' \
   $A/v1/assistant/chat                                                      # tool_calls: search_documents; cites [1]
-curl -s -H "X-API-Key: $KEY" $A/v1/library/stats
+curl -s -H "X-API-Key: $KEY" "$A/v1/knowledge?unused=true"                 # what was never retrieved
+curl -s -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "We are a bakery with six people."}], "ui_state": {"page": "/partner"}}' \
+  $A/v1/partner/chat
 ```
 
-What to expect with the fake models: `w2.pdf` gives one `ok` W-2 with two flagged fields (`wages_tips_other_comp`: `not_printed`, because the fake raised it by 1000; `control_number`: `multiple_values`); `stack.pdf` gives a W-2, a 1099-NEC and a 1098-T (two flags each) and one `unsupported` page. The chat answer quotes the reviewed value from the rebuilt chunk. A message starting with "list" makes the fake call `list_documents` instead of `search_documents`.
+What to expect with the fake models: the chat answer quotes the line of excerpt [1] that shares the most words with the question ("Unopened goods can be returned within 30 days. [1]"). A message starting with "list" makes the fake call `list_documents` instead of `search_documents`.

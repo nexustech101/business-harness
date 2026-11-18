@@ -1,121 +1,110 @@
 # Disclaimer and limitation of liability
 
-This document applies to the Tax Document API (including its document library
-and AI assistant), the n8n intake workflow in `n8n/`, and everything they produce (together, "the Software"). It is a
-template written by the developer, not legal advice. Have an attorney
-licensed in your state review it, and the contract it is attached to, before
-relying on it.
+This document applies to the Business Harness (the API, its knowledge index,
+the business partner, the role assistants, the connectors and the dashboard)
+and everything it produces (together, "the Software"). It is a template written
+by the developer, not legal advice. Have an attorney licensed in your state
+review it, and the contract it is attached to, before relying on it.
 
-## 1. Not tax, legal or accounting advice
+## 1. Not legal, tax, financial or accounting advice
 
-The Software reads tax documents and reports what is printed on them. It does
-not prepare returns, give tax, legal or accounting advice, or make filing
-decisions. The notes written by the n8n "Accountant Assistant" (summaries,
-issues, client questions, where amounts are usually reported) and the answers
-of the API's document assistant are suggestions for a qualified preparer to
-check, not advice. The assistant answers from excerpts it retrieves; it can
-miss a document, cite the wrong one, or misstate what an excerpt says. The Software is not affiliated
-with or endorsed by the IRS or any government agency.
+The Software stores a business's documents and what the owner tells it, and
+uses language models to answer questions, draft assistants, notes and
+messages, and call connected services. It does not give legal, tax, financial
+or accounting advice, and it does not make business decisions. The partner's
+and the assistants' answers and drafts are suggestions for the business's
+people to check. The assistants answer from passages they retrieve; they can
+miss a document, cite the wrong one, or misstate what a passage says.
 
-## 2. Every value must be reviewed by a qualified person
+## 2. Every output must be checked by a person
 
 All output is produced automatically by software and machine-learning models
-and **can be wrong or incomplete**, including when it reports no flags. In
-particular:
+and **can be wrong or incomplete**. In particular:
 
 * text read by OCR from scans and photos can contain misread characters,
   digits and punctuation;
-* forms, layouts and documents the Software was not built or tested for
-  (including handwritten forms and statements from issuers it has not seen)
-  may be misidentified or partly read;
-* consistency checks and grounding remove some errors but do not detect all of them;
-* a value may be correct as printed while the source document itself is wrong.
+* layouts and documents the Software was not built or tested for may be
+  partly read;
+* a model can misunderstand a question, invent facts not in the documents,
+  or call a connector with the wrong arguments;
+* a value may be correct as stored while the source document itself is wrong.
 
-Before any value is used on a return, filing, or in advice to a client, a
-qualified person must compare it with the source document. The Software marks
-documents it considers risky (`needs_review`, validation flags), but a
-document *not* marked is not a guarantee of correctness.
+Before an answer, draft or action is relied on, sent to anyone or used in a
+filing, a person responsible for it must check it against the source.
 
 ## 3. No warranty
 
 THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTY OF ANY
 KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR
 A PARTICULAR PURPOSE, ACCURACY, AND NON-INFRINGEMENT. No statement of accuracy
-in the documentation (including test results on sample documents) is a
-warranty about the client's documents.
+in the documentation (including test results) is a warranty about the
+client's documents or data.
 
 ## 4. Limitation of liability
 
 TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE DEVELOPER IS NOT LIABLE FOR ANY
 INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE DAMAGES, OR FOR LOST
-PROFITS, LOST DATA, TAX, PENALTIES, INTEREST, OR COSTS OF AMENDED OR LATE
-FILINGS, ARISING FROM USE OF OR RELIANCE ON THE SOFTWARE OR ITS OUTPUT, EVEN IF
-ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. THE DEVELOPER'S TOTAL LIABILITY FOR
-ANY CLAIM IS LIMITED TO THE FEES PAID FOR THE SOFTWARE OR SERVICE GIVING RISE TO
-THE CLAIM IN THE TWELVE MONTHS BEFORE THE CLAIM.
+PROFITS, LOST DATA, TAXES, PENALTIES OR INTEREST, ARISING FROM USE OF OR
+RELIANCE ON THE SOFTWARE OR ITS OUTPUT, INCLUDING ACTIONS TAKEN THROUGH
+CONNECTED SERVICES, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES. THE
+DEVELOPER'S TOTAL LIABILITY FOR ANY CLAIM IS LIMITED TO THE FEES PAID FOR THE
+SOFTWARE OR SERVICE GIVING RISE TO THE CLAIM IN THE TWELVE MONTHS BEFORE THE
+CLAIM.
 
 ## 5. The client's responsibilities
 
 The Software runs on systems the client controls. The client is responsible for:
 
-* reviewing all output before use (section 2);
+* checking all output before use (section 2);
+* the write policy of each role assistant (`auto`, `ask`, `deny`) and every
+  approval it grants: a write set to `auto` runs without a person seeing it;
 * the security of the machines, networks, backups and accounts it runs on,
-  including access to the API keys, the n8n instance, its execution history and
-  the `tax_document_log` table;
-* its obligations as a holder of taxpayer data, including a written
-  information security plan under the FTC Safeguards Rule (see IRS
-  Publication 5708) and the IRS data-security guidance for tax professionals
-  (Publication 4557);
-* how long documents and extracted data are kept, and their deletion,
-  including the document library database, its stored original files and
-  their backups;
-* obtaining any consent its clients' documents require before they are processed;
-* the licenses of third-party components it runs, including n8n and the
+  including the API keys, the secrets key that encrypts connector tokens
+  (`BUSINESS_SECRETS_KEY` or `data/secrets.key`) and the accounts connectors
+  sign in to;
+* its obligations as a holder of personal, customer and employee data under
+  the laws that apply to it;
+* how long documents, workspace records and databases are kept, and their
+  deletion, including the library and business databases, the stored original
+  files, the workspace databases and their backups;
+* obtaining any consent its documents and data require before they are processed;
+* the terms of the services it connects (their API terms, data use and
+  retention) and the licenses of third-party components it runs, including
   model weights (see `THIRD_PARTY_LICENSES.md`).
 
 ## 6. Data handling, as designed
 
-* The extraction routes (`/v1/documents/...`) do not store uploaded documents
-  or extracted values.
-  The API-key database stores only hashed keys and their metadata. Logs carry
-  request ids, timings, form types and counts, not document text or values.
-* Documents added to the document library (`/v1/library/documents`) are
-  stored for review and search. The original file is kept on disk
-  (`library.files` in `config/model_config.yml`, default `data/files/`) so its
-  pages can be shown to reviewers and downloaded. The library database
-  (`library.database`) holds the extracted forms with their values as read,
-  including full tax identification numbers, and the searchable text, in
-  which Social Security numbers are masked to the last four digits. Names,
-  addresses, amounts and employer identification numbers are stored as
-  printed. Each API key sees only the documents it added; admin keys see all
-  of them. Documents, their forms, reviews and (once no other document uses
-  it) the original file stay until deleted through the API.
-* Review decisions (confirmed, corrected, rejected, with the corrected value
-  and an optional note) and form approvals are recorded with the name and id
-  of the API key that made them and the time. They record who reviewed a
-  value in the Software; they do not replace the review required by section 2
-  or the firm's own records of it.
-* Models run locally through Ollama; documents are not sent to an outside AI
-  service unless the client reconfigures the workflow or
-  `config/model_config.yml` to use one. When the assistant is configured with
-  a cloud provider, that provider receives the questions asked and the
-  results of the assistant's tools: library excerpts, document and form
-  details, and stored or re-extracted field values, with Social Security
-  numbers masked to the last four digits (names, addresses, amounts and
-  employer identification numbers as printed).
-* The n8n workflow masks tax identification numbers to the last four digits
-  before they reach the AI assistant, the log table or any email or chat alert.
+* The API-key database stores only hashed keys and their metadata. Logs carry
+  request ids, timings and counts, not document text.
+* Documents added to the library (`/v1/library/documents`) are stored for
+  search. The original file is kept on disk (`library.files` in
+  `config/model_config.yml`, default `data/files/`) so its pages can be shown
+  and downloaded. The library database (`library.database`) holds the
+  searchable text, in which Social Security numbers are masked to the last
+  four digits; names, addresses and amounts are stored as printed. Each API key
+  sees only the documents it added; admin keys see all of them. Documents and
+  (once no other document uses it) the original file stay until deleted
+  through the API.
+* The business database (`business.database`) holds each workspace's profile,
+  interview answers, assistants, approvals, notes and installed connectors.
+  Connector tokens are encrypted with the secrets key. Workspace databases are
+  SQLite files next to it, deleted with their connector.
+* Approval decisions are recorded with the name of the API key that made them
+  and the time. They record who approved an action in the Software; they do
+  not replace the client's own records.
+* Models run locally through Ollama by default; documents are not sent to an
+  outside AI service unless the client configures `config/model_config.yml` to
+  use one. With a cloud provider, that provider receives the questions asked
+  and the results of the tools: passages of documents and workspace records
+  (Social Security numbers masked), connector results and database rows.
+* Connectors send what an assistant passes them to the connected service.
 
 These are properties of the Software as delivered. Changes to its
 configuration or code by anyone other than the developer can change them.
 
-## 7. Third-party software and models
+## 7. Third-party software, services and models
 
-The Software depends on third-party packages, services and model weights that
-are provided by others under their own licenses and without warranty from the
-developer. Their availability, licensing and behaviour may change.
-
-## 8. Sample documents
-
-The documents in `tests/samples/` are synthetic. All names, tax identification
-numbers, addresses and amounts in them are fictitious.
+The Software depends on third-party packages, services, connectors and model
+weights that are provided by others under their own licenses and terms and
+without warranty from the developer. Their availability, licensing and
+behaviour may change.
