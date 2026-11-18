@@ -1,15 +1,15 @@
 """jobs.py
 
-The extraction job gate: at most `running` extraction jobs (Docling, the LLM
-and the uploaded files in memory) run at once and `queued` more may wait.
+The upload job gate: at most `running` documents are parsed and indexed at
+once (Docling and the uploaded file in memory) and `queued` more may wait.
 Beyond that a job is refused at once with `Busy` instead of piling up.
-In-process, like the rate limits. Used by the extraction and library upload
-routes (`api.deps.job_slot`) and the assistant's `extract_document` tool.
+In-process, like the rate limits. Used by the library upload route
+(`api.deps.job_slot`).
 
 *Usage:*
 >>> gate = JobGate(running=2, queued=8)
 >>> async with gate.slot():
-...     await pipeline.extract_file(data, "stack.pdf")
+...     draft = await read_file(parser, data, "handbook.pdf", chunk_chars=1500)
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from contextlib import asynccontextmanager
 
 
 class Busy(RuntimeError):
-    """Every extraction slot and the queue are taken."""
+    """Every upload slot and the queue are taken."""
 
 
 class JobGate:

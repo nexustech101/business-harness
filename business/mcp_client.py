@@ -63,7 +63,7 @@ TIMEOUT = 20.0  # seconds for connecting and listing tools, and for each OAuth s
 CALL_TIMEOUT = 60.0  # seconds for one tool call
 MAX_RESULT_CHARS = 20_000  # tool result text beyond this is cut, with a note
 MAX_TOOL_PAGES = 20
-CLIENT_INFO = Implementation(name="tax-doc-api-business", version="1")
+CLIENT_INFO = Implementation(name="business-partner", version="1")
 
 
 class ServerError(Exception):

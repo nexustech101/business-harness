@@ -1,13 +1,9 @@
 """library/files.py
 
-Original uploads, kept for review: one file per distinct upload under
-`library.files`, named by its SHA-256 (two keys uploading the same file share
-it; it is removed with the last document using it). Pages render to PNG for
-the review dashboard.
-
-Page coordinates: `ValueSource.box` is on a page 1000 units wide, origin top
-left, on both axes. A page rendered `width` pixels wide maps a box by
-multiplying each coordinate by `width / 1000`.
+Original uploads, kept for viewing and download: one file per distinct upload
+under `library.files`, named by its SHA-256 (two keys uploading the same file
+share it; it is removed with the last document using it). Pages render to PNG
+for the dashboard's document view.
 """
 
 from __future__ import annotations
@@ -98,16 +94,3 @@ def render_png(data: bytes, media_type: str, page: int, width: int) -> bytes | N
     image.save(out, format="PNG", optimize=False)
     return out.getvalue()
 
-
-def pdf_pages(data: bytes, pages: list[int]) -> bytes:
-    """A PDF of the given pages (from 1) of `data`, in that order; pages that don't exist are skipped."""
-    src = pdfium.PdfDocument(data)
-    out = pdfium.PdfDocument.new()
-    try:
-        out.import_pages(src, [p - 1 for p in pages if 1 <= p <= len(src)])
-        buffer = io.BytesIO()
-        out.save(buffer)
-        return buffer.getvalue()
-    finally:
-        out.close()
-        src.close()

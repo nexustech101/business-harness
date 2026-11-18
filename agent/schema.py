@@ -24,7 +24,7 @@ class ChatRequest(BaseModel):
     )
     scope: SearchFilters = Field(
         default_factory=SearchFilters,
-        description="Limits every tool the assistant runs (e.g. one client, one document). "
+        description="Limits every tool the assistant runs (e.g. a few documents). "
                     "The model can narrow it, never widen it."
     )
 
@@ -34,7 +34,7 @@ class Source(SearchHit):
 
 
 class ToolCallInfo(BaseModel):
-    name: str = Field(description="Tool name, e.g. search_documents, get_document.")
+    name: str = Field(description="Tool name, e.g. search_documents, read_document.")
     arguments: dict = Field(description="Arguments the model passed.")
 
 

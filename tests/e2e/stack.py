@@ -1,15 +1,14 @@
 """stack.py
 
 The whole API on fake models, for end-to-end tests and local UI work without
-GPUs: starts `tests.e2e.fake_models`, points the API at it (`OLLAMA_URL`, a
-generated assistant config), uses a fresh data directory (key database,
+GPUs: starts `tests.e2e.fake_models`, points the API at it (a generated
+model config), uses a fresh data directory (key database,
 library database, original files, business database), creates an admin and a
 client key, and serves the API (and `web/dist`, when built) with uvicorn.
 
 Prints one JSON line `{"api", "admin_key", "client_key", "data"}` when the
 keys exist (before the server accepts requests), and writes the same JSON to
-`--state` if given. Classification uses printed headings (`TEV_MODEL=none`).
-Docling still runs for real: set `HF_HUB_OFFLINE=1` and `HF_HUB_CACHE` when
+`--state` if given. Docling still runs for real: set `HF_HUB_OFFLINE=1` and `HF_HUB_CACHE` when
 its weights are cached locally.
 
 *Usage:*
@@ -37,10 +36,10 @@ def configure(data: Path, models_port: int) -> None:
     config["library"].update(database=str(data / "library.db"), files=str(data / "files"))
     config["business"]["database"] = str(data / "business.db")
     (data / "model_config.yml").write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
-    os.environ.update(DATABASE_URL=f"sqlite:///{(data / 'keys.db').as_posix()}", OLLAMA_URL=models, TEV_MODEL="none",
+    os.environ.update(DATABASE_URL=f"sqlite:///{(data / 'keys.db').as_posix()}",
                       ASSISTANT_CONFIG=str(data / "model_config.yml"), LOG_JSON="false")
     os.environ.setdefault("LOG_LEVEL", "WARNING")
-    for scope in ("LIBRARY", "SEARCH", "ASSISTANT", "PIPELINE", "CLASSIFY", "BULK"):
+    for scope in ("LIBRARY", "SEARCH", "ASSISTANT"):
         os.environ.setdefault(f"{scope}_RATE_CALLS", "1000")  # E2E suites upload and ask quickly
 
 
@@ -51,7 +50,7 @@ def main() -> None:
     parser.add_argument("--data", type=Path, default=None, help="Data directory (default: a new temporary one)")
     parser.add_argument("--state", type=Path, default=None, help="Also write the keys JSON to this file")
     args = parser.parse_args()
-    data = (args.data or Path(tempfile.mkdtemp(prefix="tda-e2e-"))).resolve()
+    data = (args.data or Path(tempfile.mkdtemp(prefix="harness-e2e-"))).resolve()
     data.mkdir(parents=True, exist_ok=True)
     configure(data, args.models_port)
 

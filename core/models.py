@@ -1,7 +1,7 @@
 """models.py
 
 Persisted models of the application database: API-key metadata only.
-Documents, extracted forms and reviews are stored by the document library
+Documents and their indexed passages are stored by the document library
 (`library/store.py`, its own SQLite file).
 """
 

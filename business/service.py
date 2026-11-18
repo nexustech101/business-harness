@@ -98,9 +98,9 @@ class Business:
         self.store.save_answer(owner, request.question_id, request.answer)
         return self.interview(owner)
 
-    async def partner_chat(self, owner: str, request: PartnerRequest, pipeline=None, jobs=None) -> PartnerResponse:
+    async def partner_chat(self, owner: str, request: PartnerRequest) -> PartnerResponse:
         """business/partner.py `chat`."""
-        return await partner.chat(self, owner, request, pipeline, jobs)
+        return await partner.chat(self, owner, request)
 
     # --- knowledge index ------------------------------------------------------------------------
 

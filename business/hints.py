@@ -66,15 +66,14 @@ PAGES: dict[str, str] = {
     "/connectors": "Connectors are what assistants act through: cloud storage and business tools (MCP servers) "
                    "and built-in apps like the workspace database. Add one, sign in when asked, and check that it "
                    "lists its tools.",
-    "/documents": "Every uploaded document. Tax forms are extracted for review; business documents become "
-                  "searchable knowledge once organized into the profile.",
+    "/documents": "Every uploaded document. Each one is searchable at once; the partner files it by "
+                  "department and kind so the right assistants can use it.",
     "/knowledge": "Everything the assistants can search: your files and what the partner recorded about the "
                   "business. Each source shows how much of it was never retrieved, so rarely used material stays "
                   "in view; open a source to read its passages.",
     "/databases": "Your own databases: create tables, import a CSV, edit rows or run SQL. Assistants given a "
                   "database read it freely; their writes follow their policy.",
-    "/documents/:id": "Review the extracted values against the original pages; flagged values need a decision "
-                      "before the form can be approved.",
+    "/documents/:id": "The document's pages and its passages exactly as the assistants search them.",
     "/assistant": "Ask questions about the stored documents; answers cite the excerpts they come from.",
     "/settings": "Settings of this dashboard and its connection to the API.",
 }

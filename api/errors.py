@@ -24,18 +24,13 @@ from agent.agent import ChatUnavailable
 from business.connectors import ConnectorError, InvalidConnector, NotAllowed
 from business.database import DatabaseError
 from business.errors import AlreadyDecided, InvalidSpec, NotActive, OutdatedWorkspace
-from core.extractor import ExtractorUnavailable
-from core.forms import FORMS
 from core.jobs import Busy
 from core.parser import SUPPORTED_MEDIA_TYPES, ConversionFailed, DocumentTooLarge, UnsupportedDocument
-from core.pipeline import MultipleForms, UnclassifiableDocument, _classification
 from core.schema import ErrorResponse
-from core.tev import ClassifierUnavailable
-from library.review import ApprovalBlocked, InvalidValue, NotReviewable
 from library.search import EmbeddingsUnavailable
 from library.store import IndexMismatch, OutdatedLibrary
 
-log = logging.getLogger("tax_doc_api")
+log = logging.getLogger("business_partner")
 
 HTTP_CODES = {400: "bad_request", 401: "unauthorized", 403: "forbidden", 404: "not_found", 503: "busy",
               413: "payload_too_large", 429: "rate_limited"}
@@ -57,15 +52,9 @@ DOMAIN_ERRORS: dict[type[Exception], DomainError] = {
     UnsupportedDocument: DomainError(415, "unsupported_media_type", lambda e: {"supported": SUPPORTED_MEDIA_TYPES}),
     DocumentTooLarge: DomainError(413, "too_many_pages"),
     ConversionFailed: DomainError(422, "unreadable_document"),
-    UnclassifiableDocument: DomainError(422, "unsupported_document_type", lambda e: {
-        "classification": _classification(e.classification).model_dump(), "supported": list(FORMS)}),
-    MultipleForms: DomainError(422, "multiple_forms", lambda e: {"forms": e.forms}),
-    ClassifierUnavailable: _MODEL_DOWN,
-    ExtractorUnavailable: _MODEL_DOWN,
     EmbeddingsUnavailable: _MODEL_DOWN,
     ChatUnavailable: _MODEL_DOWN,
     IndexMismatch: DomainError(409, "index_mismatch"),
-    ApprovalBlocked: DomainError(409, "review_incomplete", lambda e: {"undecided": e.undecided}),
     InvalidSpec: DomainError(422, "invalid_assistant"),
     NotActive: DomainError(409, "assistant_inactive"),
     AlreadyDecided: DomainError(409, "already_decided"),
@@ -73,8 +62,6 @@ DOMAIN_ERRORS: dict[type[Exception], DomainError] = {
     DatabaseError: DomainError(422, "invalid_database_request"),
     NotAllowed: DomainError(403, "forbidden"),
     ConnectorError: DomainError(502, "connector_failed"),
-    NotReviewable: DomainError(409, "not_reviewable"),
-    InvalidValue: DomainError(422, "invalid_value", lambda e: {"field": e.field}),
     Busy: DomainError(503, "busy", retry_after=30),
     OutdatedLibrary: DomainError(500, "outdated_library", log="outdated library database"),
     OutdatedWorkspace: DomainError(500, "outdated_workspace", log="outdated workspace database"),
@@ -84,14 +71,12 @@ DESCRIPTIONS = {
     400: "Empty or malformed request",
     401: "Missing or invalid API key",
     404: "Not found",
-    409: "Conflict: library built with another embedding model, a review rule (approval with undecided "
-         "flagged fields, reviewing an unsupported or duplicate form), an inactive assistant or an approval "
-         "already decided",
+    409: "Conflict: library built with another embedding model, an inactive assistant or an approval already "
+         "decided",
     403: "Admin key required",
-    413: "File, file count or page count over the limit",
-    415: "Not a PDF or supported image",
-    422: "Unreadable, unsupported or multi-form document; invalid request, corrected value, assistant spec, "
-         "connector or database statement",
+    413: "File or page count over the limit",
+    415: "Not a supported file type",
+    422: "Unreadable document; invalid request, assistant spec, connector or database statement",
     429: "Rate limit exceeded",
     502: "A connector (MCP server) could not be reached or failed",
     503: "Server busy, or a model backend is unavailable",

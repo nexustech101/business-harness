@@ -1,8 +1,8 @@
 """deps.py
 
-FastAPI dependencies and limits: API-key auth, the shared pipeline, library,
-assistant and settings, per-key rate limits, the extraction job slot, request
-body size and bounded upload reading.
+FastAPI dependencies and limits: API-key auth, the shared document parser,
+library, assistant and settings, per-key rate limits, the upload job slot,
+request body size and bounded upload reading.
 """
 
 from __future__ import annotations
@@ -22,9 +22,8 @@ from business.connectors import ConnectorHub
 from business.service import Business
 from core.auth import find_active_key, hash_key
 from core.config import Settings
-from core.jobs import JobGate
 from core.models import ApiKey
-from core.pipeline import TaxDocumentPipeline
+from core.parser import DoclingParser
 from library.service import Library
 
 MB = 1024 * 1024
@@ -53,8 +52,8 @@ AdminDep = Annotated[ApiKey, Depends(require_admin)]
 # --- App state ----------------------------------------------------------------
 
 
-def get_pipeline(request: Request) -> TaxDocumentPipeline:
-    return request.app.state.pipeline
+def get_parser(request: Request) -> DoclingParser:
+    return request.app.state.parser
 
 
 def get_settings(request: Request) -> Settings:
@@ -67,10 +66,6 @@ def get_library(request: Request) -> Library:
 
 def get_assistant(request: Request) -> Assistant:
     return request.app.state.assistant
-
-
-def get_jobs(request: Request) -> JobGate:
-    return request.app.state.jobs
 
 
 def get_business(request: Request) -> Business:
@@ -91,16 +86,10 @@ def owner_scope(key: ApiKey) -> str | None:
     return None if key.is_admin else str(key.id)
 
 
-def reviewer(key: ApiKey) -> tuple[int, str]:
-    """Who a review decision or approval is recorded under: the key's id and name."""
-    return key.id, key.name
-
-
-PipelineDep = Annotated[TaxDocumentPipeline, Depends(get_pipeline)]
+ParserDep = Annotated[DoclingParser, Depends(get_parser)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 LibraryDep = Annotated[Library, Depends(get_library)]
 AssistantDep = Annotated[Assistant, Depends(get_assistant)]
-JobsDep = Annotated[JobGate, Depends(get_jobs)]
 BusinessDep = Annotated[Business, Depends(get_business)]
 ConnectorsDep = Annotated[ConnectorHub, Depends(get_connectors)]
 
@@ -138,7 +127,7 @@ class RateLimit:
     unless given explicitly.
 
     *Usage:*
-    >>> @router.post("/x", dependencies=[Depends(RateLimit("pipeline"))])
+    >>> @router.post("/x", dependencies=[Depends(RateLimit("library"))])
     """
 
     def __init__(self, scope: str, calls: int | None = None, seconds: int | None = None):
@@ -152,11 +141,11 @@ class RateLimit:
         client = hash_key(raw_key) if raw_key else (request.client.host if request.client else "local")
         request.app.state.rate_windows.hit(self.scope, client, calls, seconds)
 
-# --- Extraction jobs (core.jobs.JobGate) -----------------------------------------
+# --- Upload jobs (core.jobs.JobGate) -----------------------------------------------
 
 
 async def job_slot(request: Request) -> AsyncIterator[None]:
-    """Dependency: hold an extraction slot for the rest of the request (uploads are read inside it)."""
+    """Dependency: hold an upload slot for the rest of the request (the file is read inside it)."""
     async with request.app.state.jobs.slot():
         yield
 
@@ -167,22 +156,21 @@ async def job_slot(request: Request) -> AsyncIterator[None]:
 class BodyLimit:
     """
     ASGI middleware counting request body bytes as they arrive, so the limit
-    holds without (or despite) a Content-Length header: `bulk_max_total_mb`
-    for the bulk route, `max_upload_mb` elsewhere, plus room for multipart
-    headers. Raises 413 from inside the body read.
+    holds without (or despite) a Content-Length header: `max_upload_mb`
+    plus room for multipart headers. Raises 413 from inside the body read.
     """
 
     def __init__(self, app, settings: Settings):
         self.app, self.settings = app, settings
 
-    def limit(self, path: str) -> int:
-        mb = self.settings.bulk_max_total_mb if path.endswith("/bulk") else self.settings.max_upload_mb
-        return mb * MB + 64 * 1024
+    @property
+    def limit(self) -> int:
+        return self.settings.max_upload_mb * MB + 64 * 1024
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
-        limit, seen = self.limit(scope["path"]), 0
+        limit, seen = self.limit, 0
 
         async def counted():
             nonlocal seen

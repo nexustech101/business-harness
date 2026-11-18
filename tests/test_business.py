@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import sqlite3
 from datetime import UTC, datetime, timedelta
-from types import SimpleNamespace
 
 import pytest
 
@@ -31,9 +29,6 @@ from business.schema import (
     UiState,
 )
 from business.store import Store
-from core.layout import Block
-from core.parser import ParsedDocument
-from library.ingest import read_file
 from tests.fakes import FakeHub, add, connector, draft, listing, workspace
 
 PROFILE = BusinessProfile(
@@ -350,27 +345,6 @@ def test_hints_route_logic_reads_the_owners_workspace(tmp_path):
     add(business.library, draft("contract", title="contract"), owner="1")
     response = business.hints("1", HintsRequest(state=UiState(page="/")))
     assert [h.id for h in response.hints] == ["interview", "organize-documents"]
-
-
-# --- library uploads without extraction --------------------------------------------------------------------
-
-
-def test_extract_false_stores_pdf_pages_as_text_without_forms():
-    from tests.test_assistant import blank_pdf
-
-    blocks = [Block(p, 30, 30, 400, 45, f"terms of page {p}") for p in (1, 2)]
-    parsed = ParsedDocument("c.pdf", "application/pdf", "0" * 64, 2, True, blocks, {}, 0)
-    seen = {}
-
-    async def parse(data, filename, max_pages=None):
-        seen["max_pages"] = max_pages
-        return parsed
-
-    pipeline = SimpleNamespace(parser=SimpleNamespace(parse=parse), settings=SimpleNamespace(bulk_max_pages=100))
-    result = asyncio.run(read_file(pipeline, blank_pdf(2), "contract.pdf", chunk_chars=1500, extract=False))
-    assert result.forms == [] and seen["max_pages"] == 100
-    assert [(c.document_type, c.page_number, c.content) for c in result.chunks] == \
-        [("text", 1, "terms of page 1"), ("text", 2, "terms of page 2")]
 
 
 def test_a_note_cannot_close_the_shared_notes_block():

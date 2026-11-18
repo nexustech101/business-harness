@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.deps import BusinessDep, ClientDep, JobsDep, PipelineDep, RateLimit, business_owner, require_api_key
+from api.deps import BusinessDep, ClientDep, RateLimit, business_owner, require_api_key
 from api.errors import responses
 from business.schema import (
     AnswerRequest,
@@ -69,15 +69,14 @@ def answer(body: AnswerRequest, key: ClientDep, business: BusinessDep) -> Envelo
 
 @router.post("/v1/partner/chat", response_model=Envelope[PartnerResponse], responses=responses(422, 429, 503),
              dependencies=[Depends(RateLimit("assistant"))])
-async def partner_chat(body: PartnerRequest, key: ClientDep, business: BusinessDep, pipeline: PipelineDep,
-                       jobs: JobsDep) -> Envelope[PartnerResponse]:
+async def partner_chat(body: PartnerRequest, key: ClientDep, business: BusinessDep) -> Envelope[PartnerResponse]:
     """
     Talk to the business partner. Stateless: send the conversation so far, ending with the owner's message, and
     the screen it was sent from. The partner interviews the owner from the question bank, records answers and
     profile facts, organizes uploaded documents, recommends connectors and drafts assistants (JSON specs the
     owner activates).
     """
-    return Envelope(data=await business.partner_chat(business_owner(key), body, pipeline=pipeline, jobs=jobs))
+    return Envelope(data=await business.partner_chat(business_owner(key), body))
 
 
 @router.get("/v1/business/documents", response_model=Envelope[list[OrganizedDocument]])

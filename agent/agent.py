@@ -24,7 +24,7 @@ returned as `sources`, which the answer cites as [n]; every call is listed in
 
 *Usage:*
 >>> assistant = Assistant(config.assistant, ChatClient(config.chat), library)
->>> response = await assistant.reply(ChatRequest(messages=[...]), owner="7", pipeline=pipeline, jobs=jobs)
+>>> response = await assistant.reply(ChatRequest(messages=[...]), owner="7")
 >>> reply, usage = await tool_loop(chat, messages, [tool.spec], dispatch, max_rounds=4)
 """
 
@@ -42,7 +42,6 @@ import httpx
 from agent.config import AssistantSettings, ChatConfig
 from agent.schema import ChatMessage, ChatRequest, ChatResponse, ToolCallInfo
 from agent.tools import TOOLS, ToolContext
-from core.jobs import JobGate
 from library.service import Library
 
 log = logging.getLogger(__name__)
@@ -202,10 +201,9 @@ class Assistant:
         self.library = library
         self.tools = [t.spec for t in TOOLS.values()]
 
-    async def reply(self, request: ChatRequest, owner: str | None, pipeline=None,
-                    jobs: JobGate | None = None) -> ChatResponse:
-        """`owner`: the caller's API key id (None: admin). `pipeline` / `jobs` serve the classify and extract tools."""
-        ctx = ToolContext(library=self.library, scope=request.scope, owner=owner, pipeline=pipeline, jobs=jobs)
+    async def reply(self, request: ChatRequest, owner: str | None) -> ChatResponse:
+        """`owner`: the caller's API key id (None: admin)."""
+        ctx = ToolContext(library=self.library, scope=request.scope, owner=owner)
         messages = [{"role": "system", "content": self.settings.system_prompt}]
         messages += [m.model_dump() for m in request.messages]
         calls: list[ToolCallInfo] = []

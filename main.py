@@ -54,7 +54,7 @@ def download_models(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Tax Document API")
+    parser = argparse.ArgumentParser(description="Business Partner API")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("serve", help="Run the API server")

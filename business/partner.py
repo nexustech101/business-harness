@@ -171,8 +171,8 @@ _shared("browse_knowledge")
 _shared("read_document")
 
 
-@partner_tool("list_documents", "List the owner's uploaded documents (id, title, type, added). Use the ids with "
-              "organize_document.", TOOLS["list_documents"].parameters)
+@partner_tool("list_documents", "List the stored documents (id, title, type, added) and whether each is "
+              "organized. Use the ids with organize_document.", TOOLS["list_documents"].parameters)
 async def list_documents(args: dict, ctx: PartnerContext) -> str:
     listing = await TOOLS["list_documents"].run(args, ctx.docs)
     organized = {d.document_id: d for d in await asyncio.to_thread(ctx.business.documents, ctx.owner)}
@@ -323,11 +323,10 @@ def state_message(business: Business, owner: str, request: PartnerRequest) -> st
     return "\n".join(lines)
 
 
-async def chat(business: Business, owner: str, request: PartnerRequest, pipeline=None, jobs=None) -> PartnerResponse:
+async def chat(business: Business, owner: str, request: PartnerRequest) -> PartnerResponse:
     settings = business.config.partner
     await business.sync_memory(owner)  # what was recorded in earlier turns is searchable in this one
-    ctx = PartnerContext(business, owner, ToolContext(library=business.library, scope=SearchFilters(), owner=owner,
-                                                      pipeline=pipeline, jobs=jobs))
+    ctx = PartnerContext(business, owner, ToolContext(library=business.library, scope=SearchFilters(), owner=owner))
     messages = [{"role": "system", "content": settings.system_prompt},
                 {"role": "system", "content": await asyncio.to_thread(state_message, business, owner, request)}]
     messages += [m.model_dump() for m in request.messages]

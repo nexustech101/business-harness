@@ -9,8 +9,6 @@ from api.deps import (
     AssistantDep,
     BusinessDep,
     ClientDep,
-    JobsDep,
-    PipelineDep,
     RateLimit,
     business_owner,
     owner_scope,
@@ -30,16 +28,16 @@ router = APIRouter(prefix="/v1/assistant", tags=["Assistant"], dependencies=[Dep
     dependencies=[Depends(RateLimit("assistant"))],
     summary="Ask the assistant about stored documents",
 )
-async def chat(body: ChatRequest, key: ClientDep, assistant: AssistantDep, business: BusinessDep,
-               pipeline: PipelineDep, jobs: JobsDep) -> Envelope[ChatResponse]:
+async def chat(body: ChatRequest, key: ClientDep, assistant: AssistantDep,
+               business: BusinessDep) -> Envelope[ChatResponse]:
     """
     Stateless: send the conversation so far, oldest first, ending with the
-    user's message. The assistant uses read-only tools (search, list and read
-    documents, classify or re-extract a stored file) on the documents this key
-    may read, within `scope`, then answers citing search excerpts as [n].
+    user's message. The assistant uses read-only tools (search, browse, read
+    and list documents) on the documents this key may read, within `scope`,
+    then answers citing excerpts as [n].
     `sources` lists every excerpt it retrieved under those numbers;
     `tool_calls` lists the tools it ran. The workspace's own records
     (business profile, discovery answers, notes) are part of what it searches.
     """
     await business.sync_memory(business_owner(key))
-    return Envelope(data=await assistant.reply(body, owner_scope(key), pipeline=pipeline, jobs=jobs))
+    return Envelope(data=await assistant.reply(body, owner_scope(key)))

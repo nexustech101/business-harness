@@ -3,18 +3,11 @@
 Builds the FastAPI application: lifespan (database, model loading), request
 middleware, error handlers and routers. Routes live in `api/routes/`.
 
-    POST /v1/documents/extract        one form   -> fields
-    POST /v1/documents/extract/bulk   files      -> every form in them
-    POST /v1/documents/classify       file/text  -> form type
-    GET  /v1/document-types           supported forms and schemas
     GET  /health                      readiness (no auth)
     GET  /auth/me                     check a key
     POST|GET|DELETE /api-keys         key management (admin)
-    POST|GET|DELETE /v1/library/documents[/{id}]   stored documents, their forms and originals
+    POST|GET|DELETE /v1/library/documents[/{id}]   stored documents and their originals
     GET  /v1/library/documents/{id}/pages/{n} | /file   page PNG, original file
-    GET  /v1/library/stats            dashboard counts
-    GET  /v1/library/forms/{id}       a form as review checks
-    PUT|DELETE /v1/library/forms/{id}/reviews/{field}, POST .../approve | .../reopen   review
     POST /v1/library/search           filtered semantic + keyword search
     POST /v1/assistant/chat           questions answered from the library, with read-only tools
     GET  /v1/workspace, POST /v1/workspace/hints     workspace summary, contextual hints
@@ -30,7 +23,7 @@ middleware, error handlers and routers. Routes live in `api/routes/`.
 
 *Usage:*
 >>> app = create_app()                      # uvicorn main:app
->>> app = create_app(settings, pipeline=fake, load_models=False, business=business)   # tests
+>>> app = create_app(settings, parser=fake, load_models=False, business=business)   # tests
 """
 
 from __future__ import annotations
@@ -55,7 +48,7 @@ from api.routes import assistants as assistants_routes
 from api.routes import business as business_routes
 from api.routes import connectors as connectors_routes
 from api.routes import databases as databases_routes
-from api.routes import documents, keys, reviews, system
+from api.routes import keys, system
 from api.routes import knowledge as knowledge_routes
 from api.routes import library as library_routes
 from api.web import mount_dashboard
@@ -65,23 +58,23 @@ from business.service import Business
 from core.config import PROJECT_ROOT, Settings, get_settings
 from core.db import db, init_db
 from core.jobs import JobGate
-from core.pipeline import TaxDocumentPipeline
+from core.parser import DoclingParser
 from core.utils import setup_logging
 from library.service import Library
 
-log = logging.getLogger("tax_doc_api")
+log = logging.getLogger("business_partner")
 
 WEB_DIST = PROJECT_ROOT / "web" / "dist"
 
 DISCLAIMER = (
-    "Output is machine-extracted decision support, not tax or legal advice. A qualified person must review "
-    "every value against the source document before it is used on a return. See DISCLAIMER.md."
+    "Answers and actions come from language models working on your documents: decision support, not legal, "
+    "tax or financial advice. Check them against the source before relying on them. See DISCLAIMER.md."
 )
 
 
 def create_app(
     settings: Settings | None = None,
-    pipeline: TaxDocumentPipeline | None = None,
+    parser: DoclingParser | None = None,
     load_models: bool = True,
     dispose_db_on_shutdown: bool = True,
     assistant: tuple[Library, Assistant] | None = None,
@@ -97,7 +90,7 @@ def create_app(
     redirects to `/docs`).
     """
     settings = settings or get_settings()
-    pipeline = pipeline or TaxDocumentPipeline(settings)
+    parser = parser or DoclingParser(settings)
     library, assistant_ = assistant or agent.build(load_config(settings.assistant_config))
     if business is None:
         config = load_business_config(settings.assistant_config)
@@ -110,8 +103,7 @@ def create_app(
         setup_logging(settings.log_level, settings.log_json)
         init_db()
         if load_models:  # Docling weights load once per process and stay resident
-            await run_in_threadpool(pipeline.load)
-            await pipeline.warmup_models()
+            await run_in_threadpool(parser.load)
         log.info("api ready")
         yield
         if dispose_db_on_shutdown:  # terminal: registers managers can't be reused afterwards
@@ -122,11 +114,11 @@ def create_app(
         version="2.0.0",
         lifespan=lifespan,
         description="A business workspace: a partner that learns the business from the owner and its documents, "
-                    "a searchable knowledge index, role assistants, and connectors they act through. Includes "
-                    "extraction of US tax forms into validated JSON.\n\n" + DISCLAIMER,
+                    "a searchable knowledge index, role assistants, and connectors they act through.\n\n"
+                    + DISCLAIMER,
     )
     app.state.settings = settings
-    app.state.pipeline = pipeline
+    app.state.parser = parser
     app.state.rate_windows = RateWindows()
     app.state.jobs = JobGate(settings.max_concurrent_jobs, settings.max_queued_jobs)
     app.state.library = library
@@ -140,7 +132,7 @@ def create_app(
         request.state.request_id = request.headers.get("X-Request-ID") or uuid.uuid4().hex
         started = time.perf_counter()
         # Early refusal when the client declares an oversized body; BodyLimit enforces the actual bytes.
-        limit_mb = settings.bulk_max_total_mb if request.url.path.endswith("/bulk") else settings.max_upload_mb
+        limit_mb = settings.max_upload_mb
         length = request.headers.get("content-length")
         if length and length.isdigit() and int(length) > limit_mb * MB + 64 * 1024:
             response = errors.error_response(
@@ -160,9 +152,7 @@ def create_app(
     errors.register(app)
     app.include_router(system.router)
     app.include_router(keys.router)
-    app.include_router(documents.router)
     app.include_router(library_routes.router)
-    app.include_router(reviews.router)
     app.include_router(assistant_routes.router)
     app.include_router(business_routes.router)
     app.include_router(assistants_routes.router)

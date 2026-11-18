@@ -13,9 +13,9 @@ Production choices:
   have a PDF text layer, so digital PDFs pay almost nothing for OCR and
   scans/photos are OCR'd in full. RapidOCR on onnxruntime is the lightest
   engine Docling supports.
-* **Nothing the extractor does not read.** Table structure (TableFormer),
+* **Nothing the index does not read.** Table structure (TableFormer),
   page/picture images, enrichments and picture classification are off; the
-  extractor reads Docling's raw line cells (`generate_parsed_pages`).
+  library indexes Docling's raw line cells (`generate_parsed_pages`).
 * **Bounded work.** Conversions are limited by page count, file size and a
   timeout, and a semaphore caps how many run at once (models are CPU/GPU
   bound; more parallelism only thrashes).
@@ -30,7 +30,6 @@ import logging
 import time
 from dataclasses import dataclass, field
 
-import numpy as np
 import pypdfium2 as pdfium
 from docling.datamodel.accelerator_options import AcceleratorDevice, AcceleratorOptions
 from docling.datamodel.base_models import ConversionStatus, InputFormat
@@ -46,8 +45,7 @@ from docling_core.types.io import DocumentStream
 from PIL import Image, ImageDraw
 
 from core.config import Settings
-from core.flags import Flag
-from core.layout import Block, blocks_from_conversion, page_heights
+from core.layout import Block, blocks_from_conversion
 
 log = logging.getLogger(__name__)
 
@@ -78,9 +76,6 @@ class ConversionFailed(RuntimeError):
     """Docling could not convert the document (corrupt, encrypted, timeout)."""
 
 
-IMAGE_DPI = 150  # page images for checkbox detection
-
-
 @dataclass
 class ParsedDocument:
     filename: str
@@ -89,57 +84,13 @@ class ParsedDocument:
     pages: int
     text_layer: bool
     blocks: list[Block]
-    page_heights: dict[int, float]  # page_no -> height in block units (width is 1000)
-    parse_ms: int
-    source: bytes = field(default=b"", repr=False)  # the bytes Docling converted
+    parse_ms: int = 0
     conversion_errors: list[str] = field(default_factory=list)  # Docling reported a partial conversion
     missing_pages: list[int] = field(default_factory=list)  # pages no text was read from
-    _images: dict[int, np.ndarray] = field(default_factory=dict, repr=False)
 
     @property
     def text(self) -> str:
         return "\n".join(b.text for b in self.blocks)
-
-    def gaps_in(self, pages: list[int]) -> list[Flag]:
-        """
-        Form-level flags for a form on `pages`: the file was only partly
-        converted, or a page inside the form's page range produced no text.
-        """
-        out = []
-        if self.conversion_errors:
-            out.append(Flag(field=None, code="partial_conversion", message="the file was only partly converted "
-                            f"({'; '.join(self.conversion_errors)[:300]}); values may be missing"))
-        holes = [p for p in self.missing_pages if pages and min(pages) < p < max(pages)]
-        if holes:
-            out.append(Flag(field=None, code="missing_page",
-                            message=f"no text could be read from page(s) {', '.join(map(str, holes))} "
-                                    "inside this form"))
-        return out
-
-    def page_image(self, page_no: int) -> np.ndarray | None:
-        """
-        Grayscale image of a page whose width spans the blocks' 0..1000 units:
-        the PDF page rendered at 150 DPI, or the uploaded image itself.
-        """
-        if page_no in self._images:
-            return self._images[page_no]
-        image = None
-        try:
-            if self.media_type == "application/pdf":
-                pdf = pdfium.PdfDocument(self.source)
-                try:
-                    if 1 <= page_no <= len(pdf):
-                        bitmap = pdf[page_no - 1].render(scale=IMAGE_DPI / 72, grayscale=True)
-                        image = np.array(bitmap.to_pil().convert("L"))
-                finally:
-                    pdf.close()
-            elif page_no == 1:
-                with Image.open(io.BytesIO(self.source)) as img:
-                    image = np.array(img.convert("L"))
-        except (pdfium.PdfiumError, OSError):
-            image = None
-        self._images[page_no] = image
-        return image
 
 
 def sniff(data: bytes) -> tuple[str, InputFormat]:
@@ -241,19 +192,16 @@ class DoclingParser:
             raise ConversionFailed(f"Document conversion failed: {reasons}")
         return result
 
-    def _check_pages(self, pages: int, max_pages: int | None) -> None:
-        limit = max_pages or self.settings.max_pages
-        if pages > limit:
-            raise DocumentTooLarge(f"Document has {pages} pages; the limit is {limit}.")
-
-    def parse_sync(self, data: bytes, filename: str, max_pages: int | None = None) -> ParsedDocument:
+    def parse_sync(self, data: bytes, filename: str) -> ParsedDocument:
+        """`DocumentTooLarge` for a PDF of more than `max_pages` pages; `ConversionFailed` when nothing is read."""
         started = time.perf_counter()
         media_type, fmt = sniff(data)
         pages, text_layer = 1, False
         if fmt is InputFormat.PDF:
             pages, embedded = pdf_text_layer(data)
             text_layer = len(embedded) > 20
-            self._check_pages(pages, max_pages)
+            if pages > self.settings.max_pages:
+                raise DocumentTooLarge(f"Document has {pages} pages; the limit is {self.settings.max_pages}.")
         else:
             data = _normalise_image(data)
         safe_name = _safe_filename(filename, media_type)
@@ -269,32 +217,16 @@ class DoclingParser:
             pages=pages,  # from the file itself: pages Docling skipped still count
             text_layer=text_layer,
             blocks=blocks,
-            page_heights=page_heights(result),
             parse_ms=int((time.perf_counter() - started) * 1000),
-            source=data,
             conversion_errors=[e.error_message for e in result.errors]
             if result.status is ConversionStatus.PARTIAL_SUCCESS else [],
             missing_pages=[p for p in range(1, pages + 1) if p not in read],
         )
 
-    async def parse(self, data: bytes, filename: str, max_pages: int | None = None) -> ParsedDocument:
+    async def parse(self, data: bytes, filename: str) -> ParsedDocument:
         """Convert in a worker thread, at most `docling_max_concurrency` at a time."""
         async with self._slots:
-            return await asyncio.to_thread(self.parse_sync, data, filename, max_pages)
-
-    async def quick_text(self, data: bytes, filename: str) -> tuple[str, ParsedDocument | None]:
-        """
-        Text for classification only. Digital PDFs use the embedded text layer
-        (milliseconds, no models); scans and images go through Docling OCR.
-        """
-        _, fmt = sniff(data)
-        if fmt is InputFormat.PDF:
-            pages, embedded = await asyncio.to_thread(pdf_text_layer, data)
-            self._check_pages(pages, None)
-            if len(embedded) > 20:
-                return embedded, None
-        parsed = await self.parse(data, filename)
-        return parsed.text, parsed
+            return await asyncio.to_thread(self.parse_sync, data, filename)
 
 
 def _safe_filename(filename: str, media_type: str) -> str:
@@ -323,7 +255,7 @@ def _normalise_image(data: bytes) -> bytes:
 
 def _warmup_png() -> bytes:
     img = Image.new("L", (900, 300), 255)
-    ImageDraw.Draw(img).text((40, 120), "Form W-2 Wage and Tax Statement 2025  1,234.56", fill=0)
+    ImageDraw.Draw(img).text((40, 120), "Invoice 2025-0042  Total due 1,234.56", fill=0)
     out = io.BytesIO()
     img.save(out, format="PNG")
     return out.getvalue()

@@ -20,7 +20,7 @@ def _app(web_dist):
     from api.app import create_app
 
     make_test_app()  # tables and an admin key
-    return create_app(get_settings(), pipeline=SimpleNamespace(parser=SimpleNamespace(loaded=True)),
+    return create_app(get_settings(), parser=SimpleNamespace(loaded=True),
                       load_models=False, dispose_db_on_shutdown=False, web_dist=web_dist)
 
 

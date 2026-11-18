@@ -1,37 +1,24 @@
-"""Library as the system of record: stored forms, review checks and rules, chunk rebuilds, stats, files, routes.
-
-Model providers are faked (tests/fakes.py); the pipeline is a SimpleNamespace returning a fixed extraction.
-"""
+"""The library store: documents, originals and pages, the upgrade of an older file, and the document routes."""
 
 from __future__ import annotations
 
-import asyncio
 import io
+import sqlite3
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
 import agent
-from library import review as rules
 from library.files import page_sizes, render_png
-from library.schema import DocumentFilters, ReviewRequest
+from library.schema import DocumentFilters
 from library.search import Embedder
 from library.service import Library
+from library.store import SCHEMA_VERSION, OutdatedLibrary
 from tests.conftest import make_test_app
-from tests.fakes import (
-    REVIEWER,
-    W2_PDF,
-    Embeddings,
-    add,
-    config,
-    draft,
-    fake_pipeline,
-    search,
-    stored_w2,
-    w2_result,
-)
+from tests.fakes import Embeddings, add, blank_pdf, config, draft, fake_parser, fake_vector, search
 
 
 @pytest.fixture
@@ -39,177 +26,23 @@ def library(tmp_path):
     return Library(config(tmp_path).library, Embedder(config(tmp_path).embeddings, Embeddings()))
 
 
-def decide(library, form_id, field, decision, value=None, owner="1"):
-    return asyncio.run(library.review(form_id, field, ReviewRequest(decision=decision, value=value), REVIEWER, owner))
+def test_documents_are_listed_newest_first_and_filtered_by_title(library):
+    add(library, draft("warehouse lease", title="lease"))
+    add(library, draft("price list", title="prices"))
+    total, documents = library.list(DocumentFilters(), "1")
+    assert (total, [d.title for d in documents]) == (2, ["prices", "lease"])
+    assert [d.title for d in library.list(DocumentFilters(), "1", oldest_first=True)[1]] == ["lease", "prices"]
+    assert [d.title for d in library.list(DocumentFilters(q="LEA"), "1")[1]] == ["lease"]
+    assert library.list(DocumentFilters(q="100%"), "1")[0] == 0  # LIKE wildcards in the text are literal
+    assert (documents[0].chunks, documents[0].page_count, documents[0].type) == (1, 0, "txt")
 
 
-# --- checks ---------------------------------------------------------------------------------------
-
-
-def test_checks_flatten_every_schema_leaf_with_labels_sources_and_flags():
-    form_checks, form_flags = rules.checks(w2_result(), {})
-    by = {c.field: c for c in form_checks}
-    wages = by["wages_tips_other_comp"]
-    assert (wages.label, wages.group, wages.kind, wages.value) == ("Box 1: Wages, tips, other compensation", None,
-                                                                   "money", 68412.55)
-    assert wages.source.label == "1 Wages, tips, other compensation" and wages.flags == []
-    assert by["allocated_tips"].value is None  # empty boxes are checks too
-    assert (by["employee.tin"].label, by["employee.tin"].group, by["employee.tin"].kind) == \
-        ("a Employee's social security number", "Employee", "tin")
-    assert by["employee.address.postal_code"].group == "Employee › Address"
-    row = by["box12[0].amount"]
-    assert (row.group, row.value, row.source.label) == ("Box 12a-12d: code and amount (e.g. D, DD, W) #1", 4087.45,
-                                                        "12a")
-    assert "box12[1].amount" not in by  # only extracted rows
-    assert by["retirement_plan"].kind == "check" and by["tax_year"].kind == "year"
-    assert [c.field for c in form_checks][:3] == ["tax_year", "employee.name", "employee.tin"]  # schema order
-    assert [f.code for f in by["federal_income_tax_withheld"].flags] == ["not_printed"]
-    assert [f.code for f in form_flags] == ["partial_conversion", "unparseable"]  # no field, or no such check
-    assert rules.flagged_fields(w2_result()) == ["employee.tin", "federal_income_tax_withheld"]
-
-
-def test_corrections_are_parsed_like_extracted_values():
-    form = w2_result()
-    assert rules.normalise(form, "wages_tips_other_comp", "$1,234.50") == 1234.5
-    assert rules.normalise(form, "employee.address.state", "tx") == "TX"  # inside an empty sub-object
-    with pytest.raises(rules.InvalidValue, match="wages_tips_other_comp"):
-        rules.normalise(form, "wages_tips_other_comp", "see attached")
-    with pytest.raises(rules.InvalidValue, match="rejected"):
-        rules.normalise(form, "control_number", "")
-
-
-# --- review rules -----------------------------------------------------------------------------------
-
-
-def test_upload_stores_the_file_forms_and_pages(library):
-    document = stored_w2(library)
-    assert (document.media_type, document.page_count, document.review_status) == ("application/pdf", 1, "pending")
-    assert [(f.status, f.review_status, f.open_flags) for f in document.forms] == [("ok", "pending", 2),
-                                                                                   ("unsupported", None, 0)]
-    assert (document.forms_pending, document.forms_approved, document.open_flags) == (1, 0, 2)
-    assert document.pages[0].width == 612 and library.files.load(document.content_hash) == W2_PDF
-
-
-def test_review_decisions_approval_and_reopening(library):
-    form_id = stored_w2(library).forms[0].id
-    with pytest.raises(rules.ApprovalBlocked) as blocked:
-        library.approve(form_id, REVIEWER, "1")
-    assert blocked.value.undecided == ["employee.tin", "federal_income_tax_withheld"]
-
-    check = decide(library, form_id, "employee.tin", "confirmed")
-    assert (check.review.decision, check.review.reviewer, check.review.reviewer_id) == ("confirmed", "reviewer", 1)
-    decide(library, form_id, "federal_income_tax_withheld", "corrected", "7,921.08")
-    decide(library, form_id, "wages_tips_other_comp", "rejected")
-    form = library.approve(form_id, REVIEWER, "1")
-    assert (form.review_status, form.approved_by, form.open_flags, form.checked) == ("approved", "reviewer", 0, 3)
-    assert form.corrected_fields["federal_income_tax_withheld"] == 7921.08
-    assert form.corrected_fields["wages_tips_other_comp"] is None  # rejected: wrong, no correct value
-    assert form.corrected_fields["employee"]["tin"] == "412-56-7890"
-
-    asyncio.run(library.review(form_id, "employee.tin", None, REVIEWER, "1"))  # undo after approval reopens
-    form = library.form(form_id, "1")
-    assert (form.review_status, form.approved_by, form.open_flags) == ("pending", None, 1)
-    decide(library, form_id, "employee.tin", "confirmed")
-    library.approve(form_id, REVIEWER, "1")
-    decide(library, form_id, "control_number", "corrected", "A-1")  # any change after approval reopens
-    assert library.form(form_id, "1").review_status == "pending"
-    assert library.reopen(form_id, "1").review_status == "pending"
-
-
-def test_document_forms_load_with_their_decisions_in_one_read(library):
-    document = stored_w2(library)
-    form_id = document.forms[0].id
-    decide(library, form_id, "employee.tin", "confirmed")
-    decide(library, form_id, "federal_income_tax_withheld", "corrected", "7,921.08")
-    forms = library.forms(document.id, "1")
-    assert forms == [library.form(f.id, "1") for f in document.forms]  # index order, same as one form at a time
-    assert forms[0].review_status == "pending" and forms[0].checked == 2
-    assert library.forms(document.id, "2") == []  # another key's document
-
-
-def test_unsupported_forms_and_unknown_fields_are_not_reviewed(library):
-    document = stored_w2(library)
-    with pytest.raises(rules.NotReviewable):
-        decide(library, document.forms[1].id, "tax_year", "confirmed")
-    assert decide(library, document.forms[0].id, "no_such_box", "confirmed") is None
-    assert decide(library, document.forms[0].id, "box12[1].amount", "confirmed") is None
-    with pytest.raises(rules.InvalidValue):
-        decide(library, document.forms[0].id, "wages_tips_other_comp", "corrected", None)
-
-
-def test_corrections_rebuild_the_search_chunks(library):
-    form_id = stored_w2(library).forms[0].id
-    assert "68412.55" in search(library, "wages_tips_other_comp")[0].content
-    decide(library, form_id, "wages_tips_other_comp", "corrected", "70,000.00")
-    hits = search(library, "wages_tips_other_comp")
-    assert "wages_tips_other_comp: 70000.0" in hits[0].content and "68412.55" not in hits[0].content
-    assert "XXX-XX-7890" in hits[0].content and "412-56-7890" not in hits[0].content  # still masked
-    before = [h.chunk_id for h in search(library, "wages")]
-    decide(library, form_id, "employee.tin", "confirmed")  # no value change: chunks untouched
-    assert [h.chunk_id for h in search(library, "wages")] == before
-
-
-def test_concurrent_corrections_on_one_form_both_reach_the_chunks(library):
-    form_id = stored_w2(library).forms[0].id
-
-    async def both():
-        await asyncio.gather(*(library.review(form_id, field, ReviewRequest(decision="corrected", value=value),
-                                              REVIEWER, "1")
-                               for field, value in (("wages_tips_other_comp", "70,000.00"), ("control_number", "A-1"))))
-
-    asyncio.run(both())  # without the per-form lock the second chunk rebuild drops the first correction
-    fields = library.form(form_id, "1").corrected_fields
-    assert (fields["wages_tips_other_comp"], fields["control_number"]) == (70000.0, "A-1")
-    content = search(library, "wages_tips_other_comp")[0].content
-    assert "wages_tips_other_comp: 70000.0" in content and "control_number: A-1" in content
-
-
-def test_owner_isolation_for_forms(library):
-    form_id = stored_w2(library, owner="1").forms[0].id
-    assert library.form(form_id, "2") is None and library.form(form_id, None) is not None
-    assert decide(library, form_id, "employee.tin", "confirmed", owner="2") is None
-    assert library.approve(form_id, REVIEWER, "2") is None
-
-
-# --- list, stats, delete -------------------------------------------------------------------------------
-
-
-def test_list_filters_and_stats(library):
-    w2 = stored_w2(library, client="Gonzalez")
-    add(library, draft("engagement letter flat fee", client="Okafor", title="letter"))
-    pending = library.list(DocumentFilters(review_status="pending"), "1")
-    assert [d.id for d in pending[1]] == [w2.id]
-    assert library.list(DocumentFilters(review_status="approved"), "1")[0] == 0
-    assert [d.title for d in library.list(DocumentFilters(q="okaf"), "1")[1]] == ["letter"]
-    assert [d.title for d in library.list(DocumentFilters(q="w2"), "1")[1]] == ["w2"]
-    assert library.list(DocumentFilters(q="%"), "1")[0] == 0  # LIKE wildcards are literal
-    assert [d.title for d in library.list(DocumentFilters(), "1", oldest_first=True)[1]] == ["w2", "letter"]
-
-    stats = library.stats(DocumentFilters(), "1")
-    assert (stats.documents, stats.forms, stats.forms_by_type, stats.open_flags) == (2, 1, {"w2": 1}, 2)
-    assert stats.forms_by_review_status == {"pending": 1, "approved": 0}
-    assert [(c.client, c.documents, c.forms_pending, c.open_flags) for c in stats.clients] == \
-        [("Gonzalez", 1, 1, 2), ("Okafor", 1, 0, 0)]
-    assert library.stats(DocumentFilters(client="okafor"), "1").forms == 0
-    assert library.stats(DocumentFilters(), "2").documents == 0
-
-    form_id = w2.forms[0].id
-    decide(library, form_id, "employee.tin", "confirmed")
-    decide(library, form_id, "federal_income_tax_withheld", "rejected")
-    library.approve(form_id, REVIEWER, "1")
-    stats = library.stats(DocumentFilters(), "1")
-    assert (stats.open_flags, stats.forms_by_review_status) == (0, {"pending": 0, "approved": 1})
-    assert library.list(DocumentFilters(review_status="approved"), "1")[1][0].review_status == "approved"
-
-
-def test_delete_removes_forms_reviews_and_the_file_once_unused(library):
-    first = stored_w2(library, owner="1")
-    second = stored_w2(library, owner="2")  # the same file, another key: one stored copy
-    decide(library, first.forms[0].id, "employee.tin", "confirmed")
-    assert library.delete(first.id, "1")
-    assert library.form(first.forms[0].id, None) is None
-    assert library.files.load(first.content_hash) == W2_PDF  # still used by key 2
-    assert library.delete(second.id, "2") and library.files.load(first.content_hash) is None
+def test_delete_removes_the_file_once_no_document_uses_it(library):
+    first = add(library, draft("shared text", title="a", owner_hash="a" * 64), owner="1", data=b"same bytes")
+    second = add(library, draft("shared text", title="a", owner_hash="a" * 64), owner="2", data=b"same bytes")
+    assert library.original(first.id, "1") == (b"same bytes", "text/plain", "a.txt")
+    assert library.delete(first.id, "1") and library.files.load("a" * 64) == b"same bytes"  # still used by owner 2
+    assert library.delete(second.id, "2") and library.files.load("a" * 64) is None
 
 
 def test_images_render_upright_at_the_requested_width():
@@ -221,30 +54,102 @@ def test_images_render_upright_at_the_requested_width():
     assert render_png(out.getvalue(), "image/png", 2, 800) is None
 
 
+# --- upgrading an older library file ---------------------------------------------------------------------
+
+V2 = """
+CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE documents (id TEXT PRIMARY KEY, owner TEXT NOT NULL, title TEXT NOT NULL, type TEXT NOT NULL,
+    media_type TEXT NOT NULL, length_bytes INTEGER NOT NULL, location TEXT NOT NULL, content_hash TEXT NOT NULL,
+    client TEXT, tax_year INTEGER, pages TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL,
+    UNIQUE (owner, content_hash));
+CREATE TABLE forms (id TEXT PRIMARY KEY, document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    idx INTEGER NOT NULL, status TEXT NOT NULL, fields TEXT);
+CREATE TABLE reviews (form_id TEXT NOT NULL REFERENCES forms(id) ON DELETE CASCADE, field TEXT NOT NULL,
+    decision TEXT NOT NULL, PRIMARY KEY (form_id, field));
+CREATE TABLE document_chunks (seq INTEGER PRIMARY KEY, id TEXT NOT NULL UNIQUE,
+    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    form_id TEXT REFERENCES forms(id) ON DELETE CASCADE, chunk_index INTEGER NOT NULL, content TEXT NOT NULL,
+    section_title TEXT NOT NULL, header_level INTEGER, page_number INTEGER, sheet_name TEXT,
+    document_type TEXT NOT NULL, tax_year INTEGER, embedding BLOB NOT NULL, UNIQUE (document_id, chunk_index));
+CREATE INDEX idx_documents_owner_client ON documents(owner, client COLLATE NOCASE, tax_year);
+CREATE INDEX idx_chunks_type_year ON document_chunks(document_type, tax_year);
+CREATE VIRTUAL TABLE chunk_text USING fts5(section_title, content, content='document_chunks', content_rowid='seq');
+CREATE TRIGGER chunks_ai AFTER INSERT ON document_chunks BEGIN
+    INSERT INTO chunk_text(rowid, section_title, content) VALUES (new.seq, new.section_title, new.content);
+END;
+CREATE TABLE chunk_usage (seq INTEGER PRIMARY KEY REFERENCES document_chunks(seq) ON DELETE CASCADE,
+    hits INTEGER NOT NULL DEFAULT 0, last_hit TEXT);
+PRAGMA user_version = 2;
+"""
+
+
+def vector(text: str) -> bytes:
+    v = np.asarray(fake_vector(text), dtype=np.float32)
+    return (v / np.linalg.norm(v)).tobytes()
+
+
+def test_a_version_2_library_is_upgraded_in_place_keeping_documents_passages_and_usage(library):
+    path = library.config.database
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as conn:
+        conn.executescript(V2)
+        conn.executemany("INSERT INTO meta VALUES (?, ?)", [("embedding_model", library.embedder.model_id),
+                                                             ("dimensions", "64")])
+        conn.execute("INSERT INTO documents VALUES ('d1', '1', 'handbook', 'md', 'text/markdown', 10, 'handbook.md',"
+                     " ?, 'Okafor', 2025, '[]', '2026-01-01T00:00:00+00:00')", ("b" * 64,))
+        conn.execute("INSERT INTO forms VALUES ('f1', 'd1', 0, 'ok', '{}')")
+        conn.execute("INSERT INTO reviews VALUES ('f1', 'wages', 'confirmed')")
+        for seq, (form, text) in enumerate([(None, "refund policy within 24 hours"), ("f1", "wages: 68412.55")], 7):
+            conn.execute("INSERT INTO document_chunks VALUES (?, ?, 'd1', ?, ?, ?, 'Policies', NULL, NULL, NULL,"
+                         " 'text', 2025, ?)", (seq, f"c{seq}", form, seq - 7, text, vector(text)))
+        conn.execute("INSERT INTO chunk_usage VALUES (7, 3, '2026-01-02T00:00:00+00:00')")
+
+    (document,) = library.list(DocumentFilters(), "1")[1]  # first use: upgraded
+    assert (document.id, document.title, document.chunks) == ("d1", "handbook", 2)
+    assert search(library, "refund policy")[0].content == "refund policy within 24 hours"
+    assert search(library, "68412.55")[0].content == "wages: 68412.55"  # the keyword index still works
+    passages = library.passages("d1", "1").passages
+    assert [(p.index, p.retrievals) for p in passages] == [(0, 5), (1, 2)]  # 3 kept, plus the two searches above
+    with sqlite3.connect(path) as conn:
+        tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        columns = {r[1] for r in conn.execute("PRAGMA table_info(documents)")}
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+    assert not {"forms", "reviews", "documents_v3"} & tables and not {"client", "tax_year"} & columns
+    add(library, draft("new upload after the upgrade", title="new"))
+    assert library.delete("d1", "1") and all(h.document_id != "d1" for h in search(library, "refund policy"))
+
+
+def test_an_older_library_file_is_refused(library):
+    path = library.config.database
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(path) as conn:
+        conn.execute("CREATE TABLE documents (id TEXT PRIMARY KEY)")  # before versions were recorded
+    with pytest.raises(OutdatedLibrary):
+        library.list(DocumentFilters(), "1")
+
+
 # --- HTTP ---------------------------------------------------------------------------------------------
 
 
 @pytest.fixture
 def api(tmp_path):
     built = agent.build(config(tmp_path), None, Embeddings())
-    app, admin = make_test_app(pipeline=fake_pipeline(), assistant=built)
+    app, admin = make_test_app(parser=fake_parser("price list page"), assistant=built)
     with TestClient(app) as client:
         keys = [client.post("/api-keys", json={"name": n}, headers={"X-API-Key": admin}).json()["data"]["key"]
-                for n in ("firm", "other")]
+                for n in ("owner", "other")]
         yield SimpleNamespace(client=client, key={"X-API-Key": keys[0]}, other={"X-API-Key": keys[1]},
                               admin={"X-API-Key": admin})
 
 
-def upload(api, data=W2_PDF, name="w2.pdf", **form):
-    return api.client.post("/v1/library/documents", files={"file": (name, data, "application/pdf")}, data=form,
-                           headers=api.key)
-
-
 def test_document_pages_and_file_routes(api):
-    r = upload(api, client="Gonzalez")
+    pdf = blank_pdf(1)
+    r = api.client.post("/v1/library/documents", files={"file": ("prices.pdf", pdf, "application/pdf")},
+                        data={"title": "Price list"}, headers=api.key)
     assert r.status_code == 201, r.text
     doc = r.json()["data"]
-    assert doc["pages"] == [{"n": 1, "width": 612.0, "height": 792.0}] and len(doc["forms"]) == 2
+    assert (doc["title"], doc["type"], doc["chunks"], doc["page_count"]) == ("Price list", "pdf", 1, 1)
+    assert doc["pages"] == [{"n": 1, "width": 612.0, "height": 792.0}] and doc["location"] == "prices.pdf"
 
     r = api.client.get(f"/v1/library/documents/{doc['id']}/pages/1", params={"width": 600}, headers=api.key)
     assert r.status_code == 200 and r.headers["content-type"] == "image/png"
@@ -258,68 +163,12 @@ def test_document_pages_and_file_routes(api):
     assert api.client.get(f"/v1/library/documents/{doc['id']}/pages/1", params={"width": 9000},
                           headers=api.key).status_code == 422
     r = api.client.get(f"/v1/library/documents/{doc['id']}/file", headers=api.key)
-    assert r.content == W2_PDF and 'filename="w2.pdf"' in r.headers["content-disposition"]
+    assert r.content == pdf and 'filename="Price list.pdf"' in r.headers["content-disposition"]
 
     for path in ("", "/pages/1", "/file"):  # another key: as if it did not exist
         r = api.client.get(f"/v1/library/documents/{doc['id']}{path}", headers=api.other)
         assert r.status_code == 404 and r.json()["error"]["code"] == "not_found"
     assert api.client.get(f"/v1/library/documents/{doc['id']}/pages/1", headers=api.admin).status_code == 200
-
-
-def test_review_routes(api):
-    doc = upload(api).json()["data"]
-    form_id = doc["forms"][0]["id"]
-    form = api.client.get(f"/v1/library/forms/{form_id}", headers=api.key).json()["data"]
-    assert (form["review_status"], form["open_flags"], form["checked"]) == ("pending", 2, 0)
-    assert [f["code"] for f in form["flags"]] == ["partial_conversion", "unparseable"]
-    for method, path in (("GET", ""), ("POST", "/approve"), ("POST", "/reopen"), ("DELETE", "/reviews/employee.tin")):
-        assert api.client.request(method, f"/v1/library/forms/{form_id}{path}", headers=api.other).status_code == 404
-    assert api.client.delete(f"/v1/library/documents/{doc['id']}", headers=api.other).status_code == 404
-
-    r = api.client.post(f"/v1/library/forms/{form_id}/approve", headers=api.key)
-    assert r.status_code == 409 and r.json()["error"]["code"] == "review_incomplete"
-    assert r.json()["error"]["details"]["undecided"] == ["employee.tin", "federal_income_tax_withheld"]
-
-    url = f"/v1/library/forms/{form_id}/reviews"
-    r = api.client.put(f"{url}/box12[0].amount", json={"decision": "corrected", "value": "4,100.00", "note": "typo"},
-                       headers=api.key)
-    assert r.status_code == 200, r.text
-    check = r.json()["data"]
-    assert (check["field"], check["value"], check["review"]["value"], check["review"]["note"]) == \
-        ("box12[0].amount", 4087.45, 4100.0, "typo")
-    r = api.client.put(f"{url}/wages_tips_other_comp", json={"decision": "corrected", "value": "lots"}, headers=api.key)
-    assert r.status_code == 422 and r.json()["error"]["code"] == "invalid_value"
-    assert api.client.put(f"{url}/nope", json={"decision": "confirmed"}, headers=api.key).status_code == 404
-    assert api.client.put(f"{url}/employee.tin", json={"decision": "maybe"}, headers=api.key).status_code == 422
-    assert api.client.put(f"{url}/employee.tin", json={"decision": "confirmed"}, headers=api.other).status_code == 404
-    unsupported = doc["forms"][1]["id"]
-    r = api.client.put(f"/v1/library/forms/{unsupported}/reviews/tax_year", json={"decision": "confirmed"},
-                       headers=api.key)
-    assert r.status_code == 409 and r.json()["error"]["code"] == "not_reviewable"
-
-    for field in ("employee.tin", "federal_income_tax_withheld"):
-        assert api.client.put(f"{url}/{field}", json={"decision": "confirmed"}, headers=api.key).status_code == 200
-    r = api.client.post(f"/v1/library/forms/{form_id}/approve", headers=api.key)
-    assert r.status_code == 200 and r.json()["data"]["review_status"] == "approved"
-    assert r.json()["data"]["corrected_fields"]["box12"][0]["amount"] == 4100.0
-    r = api.client.delete(f"{url}/employee.tin", headers=api.key)
-    assert r.status_code == 200 and r.json()["data"]["review"] is None
-    assert api.client.get(f"/v1/library/forms/{form_id}", headers=api.key).json()["data"]["review_status"] == "pending"
-
-
-def test_list_and_stats_routes(api):
-    upload(api, client="Gonzalez")
-    api.client.post("/v1/library/documents", files={"file": ("notes.txt", b"call client about fees", "text/plain")},
-                    data={"client": "Okafor"}, headers=api.key)
-    r = api.client.get("/v1/library/documents", params={"review_status": "pending"}, headers=api.key)
-    (doc,) = r.json()["data"]["documents"]
-    assert (doc["title"], doc["forms_pending"], doc["open_flags"], doc["review_status"]) == ("w2", 1, 2, "pending")
-    assert api.client.get("/v1/library/documents", params={"q": "note"}, headers=api.key).json()["data"]["count"] == 1
-    r = api.client.get("/v1/library/documents", params={"order": "oldest"}, headers=api.key)
-    assert [d["title"] for d in r.json()["data"]["documents"]] == ["w2", "notes"]
-    stats = api.client.get("/v1/library/stats", headers=api.key).json()["data"]
-    assert (stats["documents"], stats["forms"], stats["open_flags"]) == (2, 1, 2)
-    okafor = api.client.get("/v1/library/stats", params={"client": "Okafor"}, headers=api.key).json()["data"]
-    assert okafor["forms"] == 0
-    assert api.client.get("/v1/library/stats", headers=api.other).json()["data"]["documents"] == 0
-    assert api.client.get("/v1/library/documents", params={"review_status": "done"}, headers=api.key).status_code == 422
+    listed = api.client.get("/v1/library/documents", headers=api.key).json()["data"]
+    assert (listed["count"], listed["documents"][0]["id"]) == (1, doc["id"])
+    assert api.client.get("/v1/library/documents", headers=api.other).json()["data"]["count"] == 0

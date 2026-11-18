@@ -1,4 +1,4 @@
-"""Document library: upload, list, read, delete, render and search documents; aggregate stats.
+"""Document library: upload, list, read, delete, render and search documents.
 
 Each API key sees the documents it uploaded; admin keys see all of them.
 """
@@ -14,7 +14,7 @@ from api.deps import (
     MB,
     ClientDep,
     LibraryDep,
-    PipelineDep,
+    ParserDep,
     RateLimit,
     SettingsDep,
     job_slot,
@@ -31,32 +31,13 @@ from library.schema import (
     DocumentDetail,
     DocumentFilters,
     DocumentList,
-    LibraryStats,
     Origin,
-    ReviewStatus,
     SearchRequest,
     SearchResponse,
 )
 
 router = APIRouter(prefix="/v1/library", tags=["Library"], dependencies=[Depends(require_api_key)],
                    responses=responses(401, 429))
-
-
-def _filters(client: str | None = Query(None, max_length=200),
-             tax_year: int | None = Query(None, ge=1900, le=2100),
-             document_type: str | None = Query(None, description="Form id, or `text`."),
-             review_status: ReviewStatus | None = Query(
-                 None, description="pending: any form awaits approval; approved: every extracted form is approved."),
-             q: str | None = Query(None, max_length=200, description="Text in the title or client name."),
-             origin: Origin | None = Query(
-                 "upload", description="upload: uploaded files (default); workspace: the workspace's own index "
-                                       "records (profile, discovery answers, notes)."),
-             ) -> DocumentFilters:
-    return DocumentFilters(client=client, tax_year=tax_year, document_type=document_type,
-                           review_status=review_status, q=q, origin=origin)
-
-
-FiltersDep = Annotated[DocumentFilters, Depends(_filters)]
 
 
 @router.post(
@@ -71,21 +52,18 @@ async def add_document(
     response: Response,
     key: ClientDep,
     library: LibraryDep,
-    pipeline: PipelineDep,
+    parser: ParserDep,
     settings: SettingsDep,
     file: Annotated[UploadFile, File(description="PDF, image, .txt, .md, .csv or .xlsx")],
-    client: Annotated[str | None, Form(max_length=200, description="Client the document belongs to.")] = None,
-    tax_year: Annotated[int | None, Form(ge=1900, le=2100, description="Used when the content has none.")] = None,
     title: Annotated[str | None, Form(max_length=500, description="Default: the file name.")] = None,
     location: Annotated[str | None, Form(max_length=1000, description="Where the original is kept.")] = None,
-    extract: Annotated[bool, Form(description="PDFs and images: extract tax forms (slower, structured).")] = True,
 ) -> Envelope[DocumentDetail]:
     """
-    Store a file: the original (for page rendering and download), every form
-    found in it (status, fields, flags; extracted forms start `pending`
-    review) and its search chunks. Other pages and text files are stored as
-    text. SSNs are masked in the search chunks. The same file uploaded again
-    returns the stored document with 200 instead of 201.
+    Store a file: the original (for page rendering and download) and its
+    searchable passages. PDFs and images are read page by page (OCR where
+    there is no text layer); text files by section, paragraph or row. SSNs
+    are masked in the passages. The same file uploaded again returns the
+    stored document with 200 instead of 201.
     """
     filename = file.filename or "upload"
     if (location or filename).startswith(WORKSPACE_PREFIX):  # the location defaults to the file name
@@ -95,8 +73,8 @@ async def add_document(
     owner = str(key.id)
     existing = library.find(owner, hashlib.sha256(data).hexdigest())
     if existing is None:
-        draft = await read_file(pipeline, data, filename, chunk_chars=library.config.chunk_chars,
-                                extract=extract, title=title, location=location, client=client, tax_year=tax_year)
+        draft = await read_file(parser, data, filename, chunk_chars=library.config.chunk_chars, title=title,
+                                location=location)
         existing, created = await library.add(draft, owner, data)
     else:
         created = False
@@ -108,25 +86,23 @@ async def add_document(
 def list_documents(
     key: ClientDep,
     library: LibraryDep,
-    filters: FiltersDep,
+    q: Annotated[str | None, Query(max_length=200, description="Text in the title.")] = None,
+    origin: Annotated[Origin | None, Query(
+        description="upload: uploaded files (default); workspace: the workspace's own index records "
+                    "(profile, discovery answers, notes).")] = "upload",
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
     order: Annotated[Literal["newest", "oldest"], Query(description="By upload time.")] = "newest",
 ) -> Envelope[DocumentList]:
-    """`count` is the total matching the filters. `tax_year` / `document_type` match any of a document's chunks."""
+    """`count` is the total matching the filters."""
+    filters = DocumentFilters(q=q, origin=origin)
     total, documents = library.list(filters, owner_scope(key), limit, offset, oldest_first=order == "oldest")
     return Envelope(data=DocumentList(count=total, documents=documents))
 
 
-@router.get("/stats", response_model=Envelope[LibraryStats])
-def stats(key: ClientDep, library: LibraryDep, filters: FiltersDep) -> Envelope[LibraryStats]:
-    """Counts for the dashboard, over the documents matching the same filters as the document list."""
-    return Envelope(data=library.stats(filters, owner_scope(key)))
-
-
 @router.get("/documents/{document_id}", response_model=Envelope[DocumentDetail], responses=responses(404))
 def get_document(document_id: str, key: ClientDep, library: LibraryDep) -> Envelope[DocumentDetail]:
-    """Metadata, page sizes (for scaling `ValueSource.box`) and a summary of every form."""
+    """Metadata and page sizes."""
     document = library.get(document_id, owner_scope(key))
     if document is None:
         raise HTTPException(404, "Document not found.")
@@ -135,7 +111,7 @@ def get_document(document_id: str, key: ClientDep, library: LibraryDep) -> Envel
 
 @router.delete("/documents/{document_id}", status_code=204, responses=responses(404))
 def delete_document(document_id: str, key: ClientDep, library: LibraryDep) -> None:
-    """Removes the document, its forms, reviews and chunks, and the original file."""
+    """Removes the document, its passages and the original file."""
     if not library.delete(document_id, owner_scope(key)):
         raise HTTPException(404, "Document not found.")
 
@@ -151,11 +127,7 @@ def page_image(
     document_id: str, page: int, request: Request, key: ClientDep, library: LibraryDep,
     width: Annotated[int, Query(ge=100, le=MAX_WIDTH, description="Image width in pixels.")] = 1200,
 ) -> Response:
-    """
-    PDFs are rendered at `width` pixels; images are scaled to it. Overlay a
-    `ValueSource.box` by multiplying its coordinates by `width / 1000`.
-    Cached by ETag (file hash, page, width).
-    """
+    """PDFs are rendered at `width` pixels; images are scaled to it. Cached by ETag (file hash, page, width)."""
     rendered = library.page_png(document_id, page, width, owner_scope(key))
     if rendered is None:
         raise HTTPException(404, "Page not found.")
@@ -191,7 +163,7 @@ def original_file(document_id: str, key: ClientDep, library: LibraryDep) -> Resp
 )
 async def search(body: SearchRequest, key: ClientDep, library: LibraryDep) -> Envelope[SearchResponse]:
     """
-    The same search the assistant runs: filters first (in the database), then
+    The same search the assistants run: filters first (in the database), then
     ranking by meaning and by keywords. `similarity` is the cosine similarity
     to the query (null when a hit matched on keywords only).
     """

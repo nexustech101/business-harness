@@ -4,12 +4,12 @@ Embeddings and hybrid search over the library's chunks (`library.store`).
 
 Search (`search_chunks`):
 
-1. Filters (client, tax year, form id, document ids, and the caller's API key)
-   become a SQL WHERE clause (`store.where`), so only matching chunks are ever read.
+1. Filters (document ids, origin, and the caller's API key) become a SQL WHERE
+   clause (`store.where`), so only matching chunks are ever read.
 2. Semantic: the query is embedded and scored against the filtered chunks'
    vectors, streamed in batches (memory stays flat as the library grows).
 3. Keyword: FTS5 BM25 over the same filtered chunks; catches exact identifiers
-   (EINs, account numbers, codes) that embeddings blur.
+   (invoice and account numbers, codes, names) that embeddings blur.
 4. The two rankings are merged by reciprocal rank fusion.
 5. Breadth: one document fills at most half of the results while others match (`diversify`), so a long
    document cannot crowd out a short one; documents that matched by keyword, or nearly as closely as the
@@ -147,8 +147,8 @@ def search_chunks(conn: sqlite3.Connection, model_id: str, vector: np.ndarray, q
     if not fused:
         return SearchOutcome(hits=[])
     rows = {r["seq"]: r for r in conn.execute(
-        "SELECT c.seq, c.id AS chunk_id, c.document_id, d.title, d.client, c.document_type, c.tax_year,"
-        " c.section_title, c.page_number, c.sheet_name, c.content FROM document_chunks c"
+        "SELECT c.seq, c.id AS chunk_id, c.document_id, d.title, c.section_title, c.page_number, c.sheet_name,"
+        " c.content FROM document_chunks c"
         f" JOIN documents d ON d.id = c.document_id WHERE c.seq IN ({','.join('?' * len(fused))})", fused)}
     ranked = diversify(fused, {seq: rows[seq]["document_id"] for seq in fused}, limit)
     hits = [SearchHit(**{k: rows[i][k] for k in rows[i].keys() if k != "seq"},  # noqa: SIM118 (sqlite3.Row)

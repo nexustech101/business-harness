@@ -1,58 +1,34 @@
 """library/service.py
 
-`Library`: what the routes and the assistant call. It ties the store (SQL),
-the embedder (search vectors), the original files and the review rules
-together; each method is one use case.
+`Library`: what the routes and the assistants call. It ties the store (SQL), the embedder (search vectors) and
+the original files together; each method is one use case.
 
 *Usage:*
 >>> library = Library(config.library, Embedder(config.embeddings))
 >>> document, created = await library.add(draft, owner="7", data=data)
->>> hits = await library.search("mortgage interest 2025", SearchFilters(client="Okafor"), owner="7")
->>> check = await library.review(form_id, "box12[0].amount", ReviewRequest(decision="confirmed"), (7, "firm"), "7")
+>>> hits = await library.search("payment terms for wholesale", SearchFilters(), owner="7")
 """
 
 from __future__ import annotations
 
 import asyncio
 import json
-from datetime import UTC, datetime
 
-from core.schema import FormResult
-from library import review as rules
 from library.config import LibraryConfig
 from library.files import SUFFIXES, Files, render_png
-from library.ingest import DocumentDraft, form_chunks
+from library.ingest import DocumentDraft
 from library.schema import (
-    Check,
     DocumentDetail,
     DocumentFilters,
-    FormDetail,
     LibraryDocument,
-    LibraryStats,
     PassageList,
-    Review,
-    ReviewRequest,
     SearchFilters,
     SearchHit,
     SearchOutcome,
     SourceList,
 )
 from library.search import Embedder, search_chunks
-from library.store import Store, StoredForm
-
-Reviewer = tuple[int, str]  # API key id and name
-
-
-def _reviewable(stored: StoredForm, action: str) -> FormResult:
-    """The stored `FormResult`; `NotReviewable` unless it was extracted (`ok`)."""
-    form = stored.result
-    if form.status != "ok":
-        raise rules.NotReviewable(f"Form {form.index} is {form.status}; only extracted forms are {action}.")
-    return form
-
-
-def _texts(chunks) -> list[str]:
-    return [f"{c.section_title}\n{c.content}".strip() for c in chunks]
+from library.store import Store
 
 
 class Library:
@@ -61,7 +37,6 @@ class Library:
         self.embedder = embedder
         self.store = Store(config.database)
         self.files = Files(config.files)
-        self._form_locks: dict[str, asyncio.Lock] = {}  # serialise decisions per form (read-modify-write)
 
     # --- documents -----------------------------------------------------------------------
 
@@ -70,12 +45,12 @@ class Library:
         existing = self.find(owner, draft.content_hash)
         if existing:
             return existing, False
-        vectors = await self.embedder.embed(_texts(draft.chunks), "document")
-        flagged = {f.index: rules.flagged_fields(f) for f in draft.forms if f.status == "ok"}
+        texts = [f"{c.section_title}\n{c.content}".strip() for c in draft.chunks]
+        vectors = await self.embedder.embed(texts, "document")
 
         def store() -> DocumentDetail:
             self.files.save(draft.content_hash, data)
-            doc_id = self.store.insert(draft, vectors, owner, self.embedder.model_id, flagged)
+            doc_id = self.store.insert(draft, vectors, owner, self.embedder.model_id)
             return self.store.document(doc_id, owner)
 
         return await asyncio.to_thread(store), True
@@ -89,11 +64,11 @@ class Library:
 
     def list(self, filters: DocumentFilters, owner: str | None, limit: int = 50, offset: int = 0,
              oldest_first: bool = False) -> tuple[int, list[LibraryDocument]]:
-        """`document_type` / `tax_year` match any of a document's chunks."""
+        """(total matching, a page of documents)."""
         return self.store.list(filters, owner, limit, offset, oldest_first)
 
     def delete(self, document_id: str, owner: str | None) -> bool:
-        """Removes the document, its forms, reviews and chunks, and the original file once no document uses it."""
+        """Removes the document and its chunks, and the original file once no document uses it."""
         content_hash = self.store.delete(document_id, owner)
         if content_hash is None:
             return False
@@ -101,8 +76,9 @@ class Library:
             self.files.delete(content_hash)
         return True
 
-    def stats(self, filters: DocumentFilters, owner: str | None) -> LibraryStats:
-        return self.store.stats(filters, owner)
+    def at_location(self, owner: str, location: str) -> list[tuple[str, str]]:
+        """(document id, content hash) of the owner's documents stored under `location`, newest first."""
+        return self.store.at_location(owner, location)
 
     def original(self, document_id: str, owner: str | None) -> tuple[bytes, str, str] | None:
         """(bytes, media type, file name) of the uploaded file."""
@@ -128,7 +104,7 @@ class Library:
         return (await self.search_wide(query, filters, owner, limit)).hits
 
     async def search_wide(self, query: str, filters: SearchFilters, owner: str | None,
-                   limit: int | None = None) -> SearchOutcome:
+                          limit: int | None = None) -> SearchOutcome:
         """`search` plus the sources that matched without a passage among the hits (library/search.py)."""
         limit = min(limit or self.config.default_results, self.config.max_results)
         vector = (await self.embedder.embed([query], "query"))[0]
@@ -150,91 +126,3 @@ class Library:
                  record: bool = False) -> PassageList | None:
         """A document's passages in full, in order; `record` counts them as retrieved."""
         return self.store.passages(document_id, owner, limit, offset, record)
-
-    def at_location(self, owner: str, location: str) -> list[tuple[str, str]]:
-        """(document id, content hash) of the owner's documents stored under `location`, newest first."""
-        return self.store.at_location(owner, location)
-
-    # --- review ----------------------------------------------------------------------------
-
-    def _detail(self, stored: StoredForm) -> FormDetail:
-        form = stored.result
-        form_checks, form_flags = rules.checks(form, stored.reviews)
-        return FormDetail(
-            id=stored.id, document_id=stored.document_id, index=form.index, status=form.status, pages=form.pages,
-            document_type=form.document_type, form_name=form.form_name, duplicate_of=form.duplicate_of,
-            review_status=stored.review_status, open_flags=len(rules.undecided(form_checks)),
-            classification=form.classification, text_layer=form.text_layer, extraction_model=form.extraction_model,
-            approved_by=stored.approved_by, approved_at=stored.approved_at, flags=form_flags, checks=form_checks,
-            checked=sum(c.review is not None for c in form_checks), total=len(form_checks),
-            corrected_fields=rules.corrected_fields(form, stored.reviews))
-
-    def form(self, form_id: str, owner: str | None) -> FormDetail | None:
-        stored = self.store.form(form_id, owner)
-        return self._detail(stored) if stored else None
-
-    def forms(self, document_id: str, owner: str | None) -> list[FormDetail]:
-        """Every form of a document with its checks; one query."""
-        return [self._detail(stored) for stored in self.store.forms(document_id, owner)]
-
-    async def review(self, form_id: str, path: str, request: ReviewRequest | None, reviewer: Reviewer,
-                     owner: str | None) -> Check | None:
-        """
-        Set (`request`) or clear (None) the decision on one field; None when the
-        form or field does not exist. Reopens an approved form. When the
-        decision changes the form's values, its search chunks are rebuilt from
-        the corrected fields in the same transaction.
-        """
-        async with self._form_locks.setdefault(form_id, asyncio.Lock()):
-            return await self._review(form_id, path, request, reviewer, owner)
-
-    async def _review(self, form_id: str, path: str, request: ReviewRequest | None, reviewer: Reviewer,
-                      owner: str | None) -> Check | None:
-        stored = await asyncio.to_thread(self.store.form, form_id, owner)
-        if stored is None:
-            return None
-        form = _reviewable(stored, "reviewed")
-        if path not in {c.field for c in rules.checks(form, {}).checks}:
-            return None
-        before = rules.corrected_fields(form, stored.reviews)
-        reviews = dict(stored.reviews)
-        decision = None
-        if request is not None:
-            value = None
-            if request.decision == "corrected":
-                if request.value is None:
-                    raise rules.InvalidValue(path, "a corrected decision needs a value")
-                value = rules.normalise(form, path, request.value)
-            decision = Review(decision=request.decision, value=value, note=request.note, reviewer=reviewer[1],
-                              reviewer_id=reviewer[0], updated_at=datetime.now(UTC))
-            reviews[path] = decision
-        else:
-            reviews.pop(path, None)
-        after = rules.corrected_fields(form, reviews)
-        chunks = vectors = None
-        if after != before:  # the assistant answers from reviewed values
-            chunks = form_chunks(form, self.config.chunk_chars, fields=after)
-            vectors = await self.embedder.embed(_texts(chunks), "document")
-        await asyncio.to_thread(self.store.save_review, stored, path, decision, self.embedder.model_id, chunks, vectors)
-        stored.reviews = reviews
-        return next(c for c in rules.checks(form, reviews).checks if c.field == path)
-
-    def approve(self, form_id: str, reviewer: Reviewer, owner: str | None) -> FormDetail | None:
-        """Approve a form; raises `ApprovalBlocked` while a flagged field has no decision."""
-        stored = self.store.form(form_id, owner)
-        if stored is None:
-            return None
-        undecided = rules.undecided(rules.checks(_reviewable(stored, "approved"), stored.reviews).checks)
-        if undecided:
-            raise rules.ApprovalBlocked(undecided)
-        if stored.review_status != "approved":
-            self.store.set_status(form_id, "approved", reviewer)
-        return self.form(form_id, owner)
-
-    def reopen(self, form_id: str, owner: str | None) -> FormDetail | None:
-        stored = self.store.form(form_id, owner)
-        if stored is None:
-            return None
-        _reviewable(stored, "reopened")
-        self.store.set_status(form_id, "pending")
-        return self.form(form_id, owner)

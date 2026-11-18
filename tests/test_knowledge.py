@@ -36,7 +36,7 @@ BAKERY = BusinessProfile(
 def long_draft(title: str, passages: list[str]):
     """A document with one chunk per passage."""
     d = draft(passages[0], title=title)
-    d.chunks = [ChunkDraft(content=text, document_type="text", section_title=f"Part {i + 1}")
+    d.chunks = [ChunkDraft(content=text, section_title=f"Part {i + 1}")
                 for i, text in enumerate(passages)]
     return d
 
@@ -170,7 +170,7 @@ def test_search_names_the_sources_it_did_not_show(tmp_path):
         add(business.library, draft(f"supplier contract {n} renewal terms", title=f"contract-{n}"))
     result = run_tool("search_documents", {"query": "supplier contract renewal", "limit": 1}, business.library)
     assert result.count("[document ") == 3 and "Also relevant, not shown (open with read_document):" in result
-    nothing = run_tool("search_documents", {"query": "zzz"}, business.library, scope=SearchFilters(client="nobody"))
+    nothing = run_tool("search_documents", {"query": "zzz"}, business.library, scope=SearchFilters(document_ids=["none"]))
     assert nothing == "No matching documents. browse_knowledge lists everything that is stored."
 
 

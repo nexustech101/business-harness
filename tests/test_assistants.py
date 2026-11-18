@@ -37,6 +37,7 @@ from tests.fakes import (
     connector,
     connector_tool,
     draft,
+    fake_parser,
     listing,
     openai_answer,
     openai_tool_call,
@@ -343,7 +344,7 @@ def api(tmp_path):
                  openai_answer("It awaits your approval.")])
     built = agent.build(config(tmp_path), chat, Embeddings())
     hub = books_hub()
-    app, admin = make_test_app(pipeline=SimpleNamespace(parser=SimpleNamespace(loaded=True)), assistant=built,
+    app, admin = make_test_app(parser=fake_parser(), assistant=built,
                                connectors=hub)
     with TestClient(app) as client:
         created = [client.post("/api-keys", json={"name": n}, headers={"X-API-Key": admin}).json()["data"]

@@ -4,24 +4,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from api.deps import ClientDep, PipelineDep
+from api.deps import ClientDep, ParserDep
 from core.schema import ApiKeyInfo, Envelope, HealthResponse
 
 router = APIRouter(tags=["System"])
 
 
 @router.get("/health", response_model=Envelope[HealthResponse])
-async def health(pipeline: PipelineDep) -> Envelope[HealthResponse]:
-    """`ok` when Docling is loaded and Ollama serves both models; otherwise `degraded`."""
-    reachable, models = await pipeline.model_status()
-    ok = pipeline.parser.loaded and reachable and all(m.available for m in models)
-    return Envelope(
-        data=HealthResponse(
-            status="ok" if ok else "degraded",
-            docling_loaded=pipeline.parser.loaded,
-            ollama_reachable=reachable, models=models
-        )
-    )
+def health(parser: ParserDep) -> Envelope[HealthResponse]:
+    """`ok` once the document parser (Docling) is loaded; `degraded` until then."""
+    return Envelope(data=HealthResponse(status="ok" if parser.loaded else "degraded", docling_loaded=parser.loaded))
 
 
 @router.get("/auth/me", response_model=Envelope[ApiKeyInfo])
